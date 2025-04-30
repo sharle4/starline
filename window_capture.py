@@ -89,6 +89,28 @@ def get_relative_mouse_pos(window_info):
     return (relative_x, relative_y)
 
 
+def calculate_simple_trajectory(puck_pos, mouse_pos, frame_shape):
+    """Calcule une ligne droite étendue depuis le palet dans la direction de la souris."""
+    if puck_pos is None or mouse_pos is None:
+        return None, None
+
+    dx = mouse_pos[0] - puck_pos[0]
+    dy = mouse_pos[1] - puck_pos[1]
+    dist = np.sqrt(dx**2 + dy**2)
+
+    if dist < 1:
+        return puck_pos, puck_pos
+
+    ux = dx / dist
+    uy = dy / dist
+
+    end_x = int(puck_pos[0] + ux * 2000)
+    end_y = int(puck_pos[1] + uy * 2000)
+    trajectory_end = (end_x, end_y)
+
+    return puck_pos, trajectory_end
+
+
 if __name__ == "__main__":
     emulator_win = find_emulator_window()
     load_puck()
