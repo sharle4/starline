@@ -1,5 +1,6 @@
 import mss
 import numpy as np
+import tkinter as tk
 import cv2
 import pyautogui
 from window_finder import find_emulator_window
