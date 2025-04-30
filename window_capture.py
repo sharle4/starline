@@ -3,10 +3,13 @@ import numpy as np
 import tkinter as tk
 import cv2
 import pyautogui
+import time
 from window_finder import find_emulator_window
+from overlay_class import TrajectoryOverlay
 
 TEMPLATE_GRAY = None
 W, H = None, None
+OVERLAY = None
 
 def load_puck():
     """Charge le template du palet."""
@@ -67,7 +70,7 @@ def find_puck(frame):
     res = cv2.matchTemplate(frame_gray, TEMPLATE_GRAY, cv2.TM_CCOEFF_NORMED)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
 
-    threshold = 0.65
+    threshold = 0.60
     if max_val >= threshold:
         top_left = max_loc
         center_x = top_left[0] + W // 2
@@ -112,26 +115,56 @@ def calculate_simple_trajectory(puck_pos, mouse_pos, frame_shape):
     return puck_pos, trajectory_end
 
 
-if __name__ == "__main__":
+def __init__():
+    """Initialise l'application."""
+    global OVERLAY
     emulator_win = find_emulator_window()
-    load_puck()
     if emulator_win:
+        initial_monitor_info = {
+            "top": emulator_win.top, "left": emulator_win.left,
+            "width": emulator_win.width, "height": emulator_win.height
+        }
+        OVERLAY = TrajectoryOverlay(initial_monitor_info)
+    else:
+        print("Fenêtre non trouvée, impossible de lancer l'overlay.")
+        exit()
+
+    load_puck()
+    
+    
+if __name__ == "__main__":
+    __init__()
+    current_win = find_emulator_window()
+    try:
         while True:
-            frame, monitor_info = capture_window(emulator_win)
+            frame, monitor_info = capture_window(current_win)
             
             if frame is not None:
                 puck_pos = find_puck(frame)
                 mouse_pos = get_relative_mouse_pos(monitor_info)
                 
-                if puck_pos and mouse_pos:
-                    cv2.circle(frame, mouse_pos, 5, (0, 0, 255), -1)
-                    cv2.circle(frame, puck_pos, 15, (0, 255, 0), 2)
+                trajectory_start, trajectory_end = calculate_simple_trajectory(puck_pos, mouse_pos, frame.shape)
+                OVERLAY.update_trajectory(trajectory_start, trajectory_end)
+                print(f"Mouse pos: {mouse_pos}, Puck pos: {puck_pos}")
+                
+                if mouse_pos: cv2.circle(frame, mouse_pos, 5, (0, 0, 255), -1)
+                if puck_pos: cv2.circle(frame, puck_pos, 15, (0, 255, 0), 2)
                     
-                cv2.imshow("Capture Emulator", frame)
+                cv2.imshow("Debug view", frame)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
         
             else:
-                print("Erreur de capture, arrêt.")
-                break
+                print("Erreur de capture, pause.")
+                time.sleep(0.1)
+                continue
+            
+        cv2.destroyAllWindows()
+        
+    except KeyboardInterrupt:
+        print("Arrêt demandé.")
+    
+    finally:
+        if 'overlay' in locals() and OVERLAY:
+            OVERLAY.close()
         cv2.destroyAllWindows()

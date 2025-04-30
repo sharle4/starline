@@ -21,7 +21,6 @@ class TrajectoryOverlay:
         self.canvas.pack(fill=tk.BOTH, expand=True)
 
         self.line_id = None
-
         self._make_click_through()
 
     def _make_click_through(self):
@@ -34,8 +33,8 @@ class TrajectoryOverlay:
             styles = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
             styles |= win32con.WS_EX_LAYERED | win32con.WS_EX_TRANSPARENT
             win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, styles)
-            # win32gui.SetLayeredWindowAttributes(hwnd, win32api.RGB(0, 0, 0), 0, win32con.LWA_COLORKEY)
-
+            win32gui.SetLayeredWindowAttributes(hwnd, win32api.RGB(0, 0, 0), 0, win32con.LWA_COLORKEY)
+            print("Fenêtre configurée pour être 'click-through'.")
         except ImportError:
             print("pywin32 non trouvé. La fenêtre overlay ne sera pas 'click-through'.")
         except Exception as e:
@@ -57,6 +56,7 @@ class TrajectoryOverlay:
              self.line_id = None 
 
         self.root.update()
+        print(f"Trajectoire mise à jour : {start_point} -> {end_point}")
 
     def close(self):
         self.root.destroy()
