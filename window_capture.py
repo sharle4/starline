@@ -1,6 +1,7 @@
 import mss
 import numpy as np
 import cv2
+import pyautogui
 from window_finder import find_emulator_window
 
 TEMPLATE_GRAY = None
@@ -77,23 +78,36 @@ def find_puck(frame):
         return None
 
 
+def get_relative_mouse_pos(window_info):
+    """Retourne la position de la souris relative au coin supérieur gauche de la zone de capture."""
+    if not window_info: return None
+    mouse_x, mouse_y = pyautogui.position()
+
+    relative_x = mouse_x - window_info['left']
+    relative_y = mouse_y - window_info['top']
+
+    return (relative_x, relative_y)
+
+
 if __name__ == "__main__":
     emulator_win = find_emulator_window()
     load_puck()
     if emulator_win:
         while True:
-            frame, _ = capture_window(emulator_win)
+            frame, monitor_info = capture_window(emulator_win)
             
             if frame is not None:
+                puck_pos = find_puck(frame)
+                mouse_pos = get_relative_mouse_pos(monitor_info)
+                
+                if puck_pos and mouse_pos:
+                    cv2.circle(frame, mouse_pos, 5, (0, 0, 255), -1)
+                    cv2.circle(frame, puck_pos, 15, (0, 255, 0), 2)
+                    
                 cv2.imshow("Capture Emulator", frame)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
-                    
-                puck_pos = find_puck(frame)
-                if puck_pos:
-                    cv2.circle(frame, puck_pos, 15, (0, 255, 0), 2)
-                cv2.imshow("Capture Emulator", frame)
-                
+        
             else:
                 print("Erreur de capture, arrêt.")
                 break
