@@ -1,7 +1,7 @@
 import pygetwindow as gw
 import time
 
-EMULATOR_WINDOW_TITLE = "MuMu Player 12"
+EMULATOR_WINDOW_TITLE = "Soccer Stars: Football Kick"
 
 def find_emulator_window():
     """Trouve la fenêtre de l'émulateur et retourne ses informations."""
