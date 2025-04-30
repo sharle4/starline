@@ -3,6 +3,21 @@ import numpy as np
 import cv2
 from window_finder import find_emulator_window
 
+def load_puck():
+    """Charge le template du palet."""
+    try:
+        template = cv2.imread('puck_template.png', cv2.IMREAD_COLOR)
+        if template is None:
+            raise FileNotFoundError("Template non trouvé ou invalide.")
+        template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+        w, h = template_gray.shape[::-1]
+        print(f"Template chargé : {w}x{h}")
+        
+    except Exception as e:
+        print(f"Erreur chargement template: {e}. Assurez-vous d'avoir un fichier 'puck_template.png'.")
+        exit()
+        
+
 def capture_window(window):
     """Capture le contenu de la fenêtre spécifiée."""
     if not window or not window.isActive :
@@ -35,6 +50,7 @@ def capture_window(window):
         except Exception as e:
              print(f"Erreur générale de capture: {e}")
              return None, None
+
 
 
 if __name__ == "__main__":
