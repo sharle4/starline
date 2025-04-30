@@ -75,7 +75,7 @@ def find_puck(frame):
         top_left = max_loc
         center_x = top_left[0] + W // 2
         center_y = top_left[1] + H // 2
-        print(f"Palet trouvé à ({center_x}, {center_y}) avec confiance {max_val:.2f}")
+        #print(f"Palet trouvé à ({center_x}, {center_y}) avec confiance {max_val:.2f}")
         return (center_x, center_y)
     else:
         print(f"Palet non trouvé (Confiance max: {max_val:.2f} < {threshold})")
@@ -145,7 +145,7 @@ if __name__ == "__main__":
                 
                 trajectory_start, trajectory_end = calculate_simple_trajectory(puck_pos, mouse_pos, frame.shape)
                 OVERLAY.update_trajectory(trajectory_start, trajectory_end)
-                print(f"Mouse pos: {mouse_pos}, Puck pos: {puck_pos}")
+                #print(f"Mouse pos: {mouse_pos}, Puck pos: {puck_pos}")
                 
                 if mouse_pos: cv2.circle(frame, mouse_pos, 5, (0, 0, 255), -1)
                 if puck_pos: cv2.circle(frame, puck_pos, 15, (0, 255, 0), 2)
