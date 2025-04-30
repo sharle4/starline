@@ -16,7 +16,7 @@ def load_puck():
             raise FileNotFoundError("Template non trouvé ou invalide.")
         TEMPLATE_GRAY = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
         W, H = TEMPLATE_GRAY.shape[::-1]
-        print(f"Template chargé : {w}x{h}")
+        print(f"Template chargé : {W}x{H}")
         
     except Exception as e:
         print(f"Erreur chargement template: {e}. Assurez-vous d'avoir un fichier 'puck_template.png'.")
@@ -65,7 +65,7 @@ def find_puck(frame):
     res = cv2.matchTemplate(frame_gray, TEMPLATE_GRAY, cv2.TM_CCOEFF_NORMED)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
 
-    threshold = 0.8
+    threshold = 0.65
     if max_val >= threshold:
         top_left = max_loc
         center_x = top_left[0] + W // 2
@@ -79,6 +79,7 @@ def find_puck(frame):
 
 if __name__ == "__main__":
     emulator_win = find_emulator_window()
+    load_puck()
     if emulator_win:
         while True:
             frame, _ = capture_window(emulator_win)
