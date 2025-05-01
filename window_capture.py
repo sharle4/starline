@@ -69,8 +69,8 @@ def find_puck(frame, prev_pos=None):
         return None
 
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    bas  = np.array([ 20,  80,  80])
-    haut = np.array([ 40, 255, 255])
+    bas  = np.array([ 0,  129,  246])
+    haut = np.array([ 4, 57, 159])
     mask = cv2.inRange(hsv, bas, haut)
 
     mask = cv2.medianBlur(mask, 5)
@@ -92,8 +92,10 @@ def find_puck(frame, prev_pos=None):
             hx, hy = prev_pos[:2]
             hough = sorted(hough, key=lambda c: (c[0]-hx)**2 + (c[1]-hy)**2)
         x, y, r = hough[0]
+        print(f"Palet trouvé : ({x}, {y}), rayon : {r}")
         return (x, y, r)
 
+    print("Aucun palet trouvé.")
     return None
 
 
