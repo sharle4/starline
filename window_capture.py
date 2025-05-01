@@ -69,8 +69,8 @@ def find_puck(frame, prev_pos=None):
         return None
 
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    bas  = np.array([ 0,  129,  246])
-    haut = np.array([ 4, 57, 159])
+    bas  = np.array([209, 100, 96])
+    haut = np.array([219,  97,  62])
     mask = cv2.inRange(hsv, bas, haut)
 
     mask = cv2.medianBlur(mask, 5)
