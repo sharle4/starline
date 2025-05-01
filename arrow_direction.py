@@ -10,10 +10,11 @@ def find_arrow_direction(frame, puck_pos):
     if frame is None or puck_pos is None:
         return None, None
 
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-
-    edges = cv2.Canny(blurred, 50, 150)
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    lower_orange = np.array([5, 100, 100])
+    upper_orange = np.array([35, 255, 255])
+    mask = cv2.inRange(hsv, lower_orange, upper_orange)
+    edges = cv2.Canny(mask, 50, 150)
 
     # kernel = np.ones((3,3), np.uint8)
     # edges = cv2.dilate(edges, kernel, iterations=1)
