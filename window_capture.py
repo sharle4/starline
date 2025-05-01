@@ -130,21 +130,22 @@ def __init__():
         exit()
 
     
-    
-    
 if __name__ == "__main__":
     current_win = __init__()
+    prev_puck = None
     try:
         while True:
             frame, monitor_info = capture_window(current_win)
             
             if frame is not None:
                 debug_frame = frame.copy()
-                prev_puck = None
-                puck_pos = find_puck(frame)
-                if puck_pos:
-                    cv2.circle(frame, puck_pos, 15, (0, 255, 0), 2)
-                    trajectory_start, trajectory_end = find_arrow_direction(debug_frame, puck_pos)
+                
+                puck = find_puck(frame, prev_puck)
+                if puck:
+                    x, y, r = puck
+                    prev_puck = puck
+                    cv2.circle(frame, (x, y), r, (0, 255, 0), 2)
+                    trajectory_start, trajectory_end = find_arrow_direction(debug_frame, puck[:2])
                 else:
                     trajectory_start, trajectory_end = None, None
                 OVERLAY.update_trajectory(trajectory_start, trajectory_end)
