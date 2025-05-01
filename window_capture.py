@@ -97,17 +97,6 @@ def find_puck(frame, prev_pos=None):
     return None
 
 
-def get_relative_mouse_pos(window_info):
-    """Retourne la position de la souris relative au coin supérieur gauche de la zone de capture."""
-    if not window_info: return None
-    mouse_x, mouse_y = pyautogui.position()
-
-    relative_x = mouse_x - window_info['left']
-    relative_y = mouse_y - window_info['top']
-
-    return (relative_x, relative_y)
-
-
 def calculate_simple_trajectory(puck_pos, mouse_pos, frame_shape):
     """Calcule une ligne droite étendue depuis le palet dans la direction de la souris."""
     if puck_pos is None or mouse_pos is None:
@@ -173,7 +162,7 @@ if __name__ == "__main__":
             
             if frame is not None:
                 debug_frame = frame.copy()
-                
+                prev_puck = None
                 puck_pos = find_puck(frame)
                 if puck_pos:
                     cv2.circle(frame, puck_pos, 15, (0, 255, 0), 2)
