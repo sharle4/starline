@@ -1,16 +1,19 @@
 import mss
 import numpy as np
-import tkinter as tk
 import cv2
-import pyautogui
 import time
+from pynput.mouse import Listener, Button
 from window_finder import find_emulator_window
 from overlay_class import TrajectoryOverlay
 from arrow_direction import find_arrow_direction
 
+
 TEMPLATE_GRAY = None
 W, H = None, None
 OVERLAY = None
+LAST_CLICK_POS = None
+CURRENT_WIN = None
+
 
 def load_puck():
     """Charge le template du palet."""
@@ -63,7 +66,21 @@ def capture_window(window):
              return None, None
 
 
-def find_puck(frame, prev_pos=None):
+def on_mouse_click(x, y, button, pressed):
+    """Capture les clics de souris et convertit les coordonnées globales en coordonnées relatives à la fenêtre."""
+    global LAST_CLICK_POS, CURRENT_WIN
+    
+    if pressed and button == Button.left:
+        if CURRENT_WIN and CURRENT_WIN.isActive:
+            relative_x = x - CURRENT_WIN.left
+            relative_y = y - CURRENT_WIN.top
+            
+            if 0 <= relative_x < CURRENT_WIN.width and 0 <= relative_y < CURRENT_WIN.height:
+                LAST_CLICK_POS = (relative_x, relative_y)
+                print(f"Clic enregistré à: {LAST_CLICK_POS}")
+
+
+def find_puck(frame, click_pos=None):
     """Retourne (x,y,r) du palet ou None."""
     if frame is None:
         return None
@@ -88,11 +105,11 @@ def find_puck(frame, prev_pos=None):
 
     if hough is not None:
         hough = np.uint16(np.around(hough[0]))
-        if prev_pos is not None:
-            hx, hy = prev_pos[:2]
-            hough = sorted(hough, key=lambda c: (c[0]-hx)**2 + (c[1]-hy)**2)
+        if click_pos is not None:
+            cx, cy = click_pos
+            hough = sorted(hough, key=lambda c: (c[0]-cx)**2 + (c[1]-cy)**2)
         x, y, r = hough[0]
-        print(f"Palet trouvé : ({x}, {y}), rayon : {r}")
+        #print(f"Palet trouvé : ({x}, {y}), rayon : {r}")
         return (x, y, r)
 
     print("Aucun palet trouvé.")
@@ -133,19 +150,21 @@ def __init__():
 
     
 if __name__ == "__main__":
-    current_win = __init__()
-    prev_puck = None
+    CURRENT_WIN = __init__()
+    with Listener(on_click=on_mouse_click) as listener:
+        listener.join()
+
+
     try:
         while True:
-            frame, monitor_info = capture_window(current_win)
+            frame, monitor_info = capture_window(CURRENT_WIN)
             
             if frame is not None:
                 debug_frame = frame.copy()
                 
-                puck = find_puck(frame, prev_puck)
+                puck = find_puck(frame, LAST_CLICK_POS)
                 if puck:
                     x, y, r = puck
-                    prev_puck = puck
                     cv2.circle(frame, (x, y), r, (0, 255, 0), 2)
                     trajectory_start, trajectory_end = find_arrow_direction(debug_frame, puck[:2])
                 else:
@@ -169,6 +188,8 @@ if __name__ == "__main__":
         print("Arrêt demandé.")
     
     finally:
+        if mouse_listener.is_alive():
+            mouse_listener.stop()
         if 'overlay' in locals() and OVERLAY:
             OVERLAY.close()
         cv2.destroyAllWindows()
