@@ -78,6 +78,7 @@ def on_mouse_click(x, y, button, pressed):
             if 0 <= relative_x < CURRENT_WIN.width and 0 <= relative_y < CURRENT_WIN.height:
                 LAST_CLICK_POS = (relative_x, relative_y)
                 print(f"Clic enregistré à: {LAST_CLICK_POS}")
+    return True
 
 
 def find_puck(frame, click_pos=None):
@@ -109,7 +110,7 @@ def find_puck(frame, click_pos=None):
             cx, cy = click_pos
             hough = sorted(hough, key=lambda c: (c[0]-cx)**2 + (c[1]-cy)**2)
         x, y, r = hough[0]
-        #print(f"Palet trouvé : ({x}, {y}), rayon : {r}")
+        print(f"Palet trouvé : ({x}, {y}), rayon : {r}")
         return (x, y, r)
 
     print("Aucun palet trouvé.")
@@ -151,12 +152,12 @@ def __init__():
     
 if __name__ == "__main__":
     CURRENT_WIN = __init__()
-    with Listener(on_click=on_mouse_click) as listener:
-        listener.join()
-
+    mouse_listener = Listener(on_click=on_mouse_click)
+    mouse_listener.start()
 
     try:
         while True:
+
             frame, monitor_info = capture_window(CURRENT_WIN)
             
             if frame is not None:
