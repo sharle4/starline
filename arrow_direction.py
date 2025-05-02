@@ -29,23 +29,20 @@ def find_arrow_direction(frame, puck_pos):
 
     potential_arrows = []
     min_arrow_area = 50 
-    max_distance_from_puck = 2000
+    max_distance_from_puck = 200
 
     for contour in contours:
         if cv2.contourArea(contour) < min_arrow_area:
             continue
         
-        peri = cv2.arcLength(contour, True)
-        approx = cv2.approxPolyDP(contour, 0.04 * peri, True)
-        if 3 <= len(approx) <= 5:
-            rect = cv2.minAreaRect(contour)
-            (_, _), (width, height), angle = rect
-            
-            potential_arrows.append(contour)
-            #aspect_ratio = max(width, height) / min(width, height) if min(width, height) > 0 else 0
-            #if aspect_ratio > 2.0:
-            #    potential_arrows.append(contour)
-            
+        M = cv2.moments(contour)
+        if M["m00"] == 0:
+            cx = int(M["m10"] / M["m00"])
+            cy = int(M["m01"] / M["m00"])
+            distance_from_puck = np.sqrt((cx - puck_pos[0])**2 + (cy - puck_pos[1])**2)
+            if distance_from_puck < max_distance_from_puck:
+                potential_arrows.append(contour)
+                
         cv2.drawContours(frame, [contour], -1, (255, 0, 255), 2) # Rose
 
     if not potential_arrows:
