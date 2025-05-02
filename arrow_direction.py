@@ -1,6 +1,16 @@
 import cv2
 import numpy as np
 
+def distance_to_puck(contour, puck_position):
+    """ Calcule la distance entre le centre de gravité du contour et la position du palet."""
+    M = cv2.moments(contour)
+    if M["m00"] != 0:
+        cx = int(M["m10"] / M["m00"])
+        cy = int(M["m01"] / M["m00"])
+        return np.sqrt((cx - puck_position[0])**2 + (cy - puck_position[1])**2)
+    return float('inf')
+
+
 def find_arrow_direction(frame, puck_pos):
     """
     Détecte la flèche de visée près du palet et retourne son point de départ (puck_pos)
@@ -35,21 +45,17 @@ def find_arrow_direction(frame, puck_pos):
         if cv2.contourArea(contour) < min_arrow_area:
             continue
         
-        M = cv2.moments(contour)
-        if M["m00"] == 0:
-            cx = int(M["m10"] / M["m00"])
-            cy = int(M["m01"] / M["m00"])
-            distance_from_puck = np.sqrt((cx - puck_pos[0])**2 + (cy - puck_pos[1])**2)
-            if distance_from_puck < max_distance_from_puck:
-                potential_arrows.append(contour)
-                
+        if distance_to_puck(contour, puck_pos) > max_distance_from_puck:
+            continue
+        
+        potential_arrows.append(contour)       
         cv2.drawContours(frame, [contour], -1, (255, 0, 255), 2) # Rose
 
     if not potential_arrows:
         print("Aucun contour d'intérêt près du palet.")
         return None, None
 
-    arrow_contour = max(potential_arrows, key=cv2.contourArea)
+    arrow_contour = min(potential_arrows, key=lambda c: distance_to_puck(c, puck_pos))
     cv2.drawContours(frame, [arrow_contour], -1, (0, 255, 255), 2) # Cyan
 
     farthest_point = None
