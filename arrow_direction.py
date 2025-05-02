@@ -11,9 +11,13 @@ def find_arrow_direction(frame, puck_pos):
         return None, None
 
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    lower_orange = np.array([5, 100, 100])
-    upper_orange = np.array([35, 255, 255])
-    mask = cv2.inRange(hsv, lower_orange, upper_orange)
+    lower_yellow = np.array([0, 100, 100])
+    upper_yellow = np.array([10, 255, 255])
+    lower_red = np.array([20, 100, 100])
+    upper_red = np.array([50, 255, 255])
+    yellow_mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
+    red_mask = cv2.inRange(hsv, lower_red, upper_red)
+    mask = cv2.bitwise_or(yellow_mask, red_mask)
     edges = cv2.Canny(mask, 50, 150)
 
     # kernel = np.ones((3,3), np.uint8)
@@ -37,9 +41,10 @@ def find_arrow_direction(frame, puck_pos):
             rect = cv2.minAreaRect(contour)
             (_, _), (width, height), angle = rect
             
-            aspect_ratio = max(width, height) / min(width, height) if min(width, height) > 0 else 0
-            if aspect_ratio > 2.0:
-                potential_arrows.append(contour)
+            potential_arrows.append(contour)
+            #aspect_ratio = max(width, height) / min(width, height) if min(width, height) > 0 else 0
+            #if aspect_ratio > 2.0:
+            #    potential_arrows.append(contour)
             
         cv2.drawContours(frame, [contour], -1, (255, 0, 255), 2) # Rose
 
