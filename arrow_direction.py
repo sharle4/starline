@@ -1,14 +1,16 @@
 import cv2
 import numpy as np
 
-def distance_to_puck(contour, puck_position):
-    """ Calcule la distance entre le centre de gravité du contour et la position du palet."""
-    M = cv2.moments(contour)
-    if M["m00"] != 0:
-        cx = int(M["m10"] / M["m00"])
-        cy = int(M["m01"] / M["m00"])
-        return np.sqrt((cx - puck_position[0])**2 + (cy - puck_position[1])**2)
-    return float('inf')
+def distance_points(p1, p2):
+    """ Calcule la distance euclidienne entre deux points (tuples). """
+    if p1 is None or p2 is None:
+        return float('inf')
+    try:
+        return np.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
+    except (TypeError, IndexError):
+        print(f"Erreur de calcul de distance avec p1={p1}, p2={p2}")
+        return float('inf')
+
 
 
 def find_arrow_direction(frame, puck_pos):
@@ -28,10 +30,11 @@ def find_arrow_direction(frame, puck_pos):
     yellow_mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
     red_mask = cv2.inRange(hsv, lower_red, upper_red)
     mask = cv2.bitwise_or(yellow_mask, red_mask)
-    edges = cv2.Canny(mask, 50, 150)
+    mask = cv2.medianBlur(mask, 5)
 
-    # kernel = np.ones((3,3), np.uint8)
-    # edges = cv2.dilate(edges, kernel, iterations=1)
+    edges = cv2.Canny(mask, 50, 150)
+    kernel = np.ones((3,3), np.uint8)
+    edges = cv2.dilate(edges, kernel, iterations=1)
 
     cv2.imshow("Edges", edges)
 
@@ -57,6 +60,7 @@ def find_arrow_direction(frame, puck_pos):
 
     arrow_contour = min(potential_arrows, key=lambda c: distance_to_puck(c, puck_pos))
     cv2.drawContours(frame, [arrow_contour], -1, (0, 255, 255), 2) # Cyan
+    print(f"Contour d'intérêt trouvé : {arrow_contour}")
 
     farthest_point = None
     max_dist_sq = -1

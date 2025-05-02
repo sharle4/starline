@@ -110,7 +110,7 @@ def find_puck(frame, click_pos=None):
             cx, cy = click_pos
             hough = sorted(hough, key=lambda c: (c[0]-cx)**2 + (c[1]-cy)**2)
         x, y, r = hough[0]
-        print(f"Palet trouvé : ({x}, {y}), rayon : {r}")
+        #print(f"Palet trouvé : ({x}, {y}), rayon : {r}")
         return (x, y, r)
 
     print("Aucun palet trouvé.")
