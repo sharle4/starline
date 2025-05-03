@@ -32,24 +32,21 @@ def pca_orientation(contour):
         return None, None
 
 
-class ArrowTracker:
+class PointTracker:
     def __init__(self, history=5):
         self.end_hist = deque(maxlen=history)
-        self.valid    = False
 
     def smooth(self, pt):
         if pt is not None:
             self.end_hist.append(pt)
-            self.valid = True
         elif not self.end_hist:
-            self.valid = False
-        if not self.valid:
             return None
         xs = [p[0] for p in self.end_hist]
         ys = [p[1] for p in self.end_hist]
         return (int(np.mean(xs)), int(np.mean(ys)))
 
-arrow_tracker = ArrowTracker(history=5)
+closest_tracker = PointTracker(history=5)
+farthest_tracker = PointTracker(history=5)
 
 
 def find_arrow_direction(frame, puck):
@@ -110,7 +107,9 @@ def find_arrow_direction(frame, puck):
     cv2.imshow("Debug Candidates", debug_frame)
     
     if not potential_arrows:
-        return puck_pos, arrow_tracker.smooth(None)
+        print("Aucune flèche trouvée.")
+        return closest_tracker.smooth(None), farthest_tracker.smooth(None)
+
     
     best_arrow = min(potential_arrows, key=lambda a: a['dist'])
     arrow_contour = best_arrow['contour']
@@ -124,7 +123,7 @@ def find_arrow_direction(frame, puck):
     
     if arrow_contour is None or len(arrow_contour) == 0:
          print("Erreur: arrow_contour est vide.")
-         return None, None
+         return closest_tracker.smooth(None), farthest_tracker.smooth(None)
 
     try:
         for point_wrapper in arrow_contour:
@@ -154,7 +153,7 @@ def find_arrow_direction(frame, puck):
         dist_fp = distance_points(farthest_point, closest_point)
         if dist_fp == 0:
             print("Erreur: distance entre closest_point et farthest_point est nulle.")
-            return None, None
+            return closest_tracker.smooth(None), farthest_tracker.smooth(None)
 
         dx = farthest_point[0] - closest_point[0]
         dy = farthest_point[1] - closest_point[1]
@@ -162,11 +161,11 @@ def find_arrow_direction(frame, puck):
         ux = dx / dist_fp
         uy = dy / dist_fp
 
-        trajectory_length = dist_fp
+        trajectory_length = 2000
         end_x = int(closest_point[0] + ux * trajectory_length)
         end_y = int(closest_point[1] + uy * trajectory_length)
 
-        return closest_point, (end_x, end_y)
+        return closest_tracker.smooth(closest_point), farthest_tracker.smooth((end_x, end_y))
     else:
-        print("Impossible de déterminer le point le plus éloigné.")
-        return None, None
+        print("Impossible de déterminer les points extrêmes.")
+        return closest_tracker.smooth(None), farthest_tracker.smooth(None)
