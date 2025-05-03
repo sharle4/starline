@@ -31,8 +31,8 @@ def find_arrow_direction(frame, puck):
     
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     
-    yellow_lower = np.array([25, 100, 100])
-    yellow_upper = np.array([35, 255, 255])
+    yellow_lower = np.array([19, 50, 50])
+    yellow_upper = np.array([29, 255, 255])
     
     mask = cv2.inRange(hsv, yellow_lower, yellow_upper)
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
@@ -46,7 +46,7 @@ def find_arrow_direction(frame, puck):
     potential_arrows = []
     min_arrow_area = 20
     max_arrow_area = 10000
-    max_distance_from_puck = 200
+    max_distance_from_puck = 100
 
     for contour in contours:
         area = cv2.contourArea(contour)
@@ -61,6 +61,9 @@ def find_arrow_direction(frame, puck):
         centroid = (cx, cy)
         dist_to_puck = distance_points(centroid, puck_pos)
 
+        if dist_to_puck > max_distance_from_puck or dist_to_puck < puck_radius:
+            continue
+        
         potential_arrows.append({'contour': contour, 'centroid': centroid, 'area': area, 'dist': dist_to_puck})
         cv2.drawContours(debug_frame, [contour], -1, (255, 0, 255), 1)
     

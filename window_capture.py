@@ -54,9 +54,9 @@ def position_all_windows():
     cv2.moveWindow("Debug view", quadrant_width, 0)
     cv2.resizeWindow("Debug view", quadrant_width, quadrant_height)
     
-    cv2.namedWindow("Grayscale Edges", cv2.WINDOW_NORMAL)
-    cv2.moveWindow("Grayscale Edges", 0, quadrant_height)
-    cv2.resizeWindow("Grayscale Edges", quadrant_width, quadrant_height)
+    cv2.namedWindow("Yellow Arrow Mask", cv2.WINDOW_NORMAL)
+    cv2.moveWindow("Yellow Arrow Mask", 0, quadrant_height)
+    cv2.resizeWindow("Yellow Arrow Mask", quadrant_width, quadrant_height)
     
     cv2.namedWindow("Debug Candidates", cv2.WINDOW_NORMAL)
     cv2.moveWindow("Debug Candidates", quadrant_width, quadrant_height)
@@ -193,7 +193,7 @@ def __init__():
         OVERLAY = TrajectoryOverlay(initial_monitor_info)
         
         cv2.namedWindow("Debug view", cv2.WINDOW_NORMAL)
-        cv2.namedWindow("Grayscale Edges", cv2.WINDOW_NORMAL)
+        cv2.namedWindow("Yellow Arrow Mask", cv2.WINDOW_NORMAL)
         cv2.namedWindow("Debug Candidates", cv2.WINDOW_NORMAL)
         position_all_windows()
                                
