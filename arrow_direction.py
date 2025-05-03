@@ -31,10 +31,7 @@ def find_arrow_direction(frame, puck_pos):
     canny_thresh1 = 30
     canny_thresh2 = 100
     edges = cv2.Canny(blurred, canny_thresh1, canny_thresh2)
-    cv2.namedWindow("Grayscale Edges", cv2.WINDOW_NORMAL)
-    cv2.namedWindow("Debug Candidates", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("Grayscale Edges", 320, 240)
-    cv2.resizeWindow("Debug Candidates", 320, 240)
+
     cv2.imshow("Grayscale Edges", edges)
     
     contours, _ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
