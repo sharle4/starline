@@ -223,7 +223,7 @@ if __name__ == "__main__":
                 if puck:
                     x, y, r = puck
                     cv2.circle(frame, (x, y), r, (0, 255, 0), 2)
-                    trajectory_start, trajectory_end = find_arrow_direction(debug_frame, puck[:2])
+                    trajectory_start, trajectory_end = find_arrow_direction(debug_frame, puck)
                 else:
                     trajectory_start, trajectory_end = None, None
                 OVERLAY.update_trajectory(trajectory_start, trajectory_end)

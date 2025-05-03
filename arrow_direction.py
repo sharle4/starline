@@ -13,15 +13,19 @@ def distance_points(p1, p2):
 
 
 
-def find_arrow_direction(frame, puck_pos):
+def find_arrow_direction(frame, puck):
     """
     Détecte la flèche de visée près du palet et retourne son point de départ (puck_pos)
     et un point final virtuel définissant la direction.
     Retourne (None, None) si non trouvée.
     """
-    if frame is None or puck_pos is None:
+
+    if frame is None or puck is None:
         print("Erreur: Frame ou puck_pos manquant.")
         return None, None
+    
+    puck_pos = puck[:2]
+    puck_radius = puck[2]
     
     debug_frame = frame.copy()
     
@@ -31,16 +35,20 @@ def find_arrow_direction(frame, puck_pos):
     canny_thresh1 = 30
     canny_thresh2 = 100
     edges = cv2.Canny(blurred, canny_thresh1, canny_thresh2)
+    
+    kernel = np.ones((3,3), np.uint8)
+    edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)  
+    edges = cv2.dilate(edges, kernel, iterations=1)
 
     cv2.imshow("Grayscale Edges", edges)
     
     contours, _ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
     potential_arrows = []
-    min_arrow_area = 30       # Augmenter si nécessaire (dépend de la taille min de la flèche)
-    max_arrow_area = 10000    # Limite supérieure pour éviter les très grands objets
-    max_distance_from_puck = 150 # Distance max entre centre du contour et palet (ajuster)
-    min_aspect_ratio_elongation = 1.2 
+    min_arrow_area = 5
+    max_arrow_area = 10000
+    max_distance_from_puck = 100
+    min_aspect_ratio_elongation = 1 
 
     if not contours:
         print("Aucun contour trouvé par Canny.")
@@ -59,7 +67,7 @@ def find_arrow_direction(frame, puck_pos):
         centroid = (cx, cy)
         dist_to_puck = distance_points(centroid, puck_pos)
 
-        if dist_to_puck > max_distance_from_puck:
+        if dist_to_puck > max_distance_from_puck or dist_to_puck < puck_radius+4:
             continue
         
         x, y, w, h = cv2.boundingRect(contour)
@@ -77,7 +85,7 @@ def find_arrow_direction(frame, puck_pos):
     if not potential_arrows:
         print("Aucune flèche potentielle après filtrage.")
         return None, None
-
+    print(f"Flèches potentielles trouvées: {len(potential_arrows)}")
     best_arrow = min(potential_arrows, key=lambda a: a['dist'])
     arrow_contour = best_arrow['contour']
 
@@ -116,7 +124,7 @@ def find_arrow_direction(frame, puck_pos):
         ux = dx / dist_fp
         uy = dy / dist_fp
 
-        trajectory_length = 2000
+        trajectory_length = dist_fp
         end_x = int(puck_pos[0] + ux * trajectory_length)
         end_y = int(puck_pos[1] + uy * trajectory_length)
 
