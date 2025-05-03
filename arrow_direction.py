@@ -118,7 +118,9 @@ def find_arrow_direction(frame, puck):
     cv2.drawContours(debug_frame, [arrow_contour], -1, (0, 255, 255), 2)
 
     farthest_point = None
+    closest_point = None
     max_dist_from_puck_sq = -1
+    min_dist_from_puck_sq = float('inf')
     
     if arrow_contour is None or len(arrow_contour) == 0:
          print("Erreur: arrow_contour est vide.")
@@ -126,40 +128,45 @@ def find_arrow_direction(frame, puck):
 
     try:
         for point_wrapper in arrow_contour:
-             point = tuple(point_wrapper[0])
-             dist_sq = (point[0] - puck_pos[0])**2 + (point[1] - puck_pos[1])**2
-             if dist_sq > max_dist_from_puck_sq:
+            point = tuple(point_wrapper[0])
+            dist_sq = (point[0] - puck_pos[0])**2 + (point[1] - puck_pos[1])**2
+             
+            if dist_sq > max_dist_from_puck_sq:
                  max_dist_from_puck_sq = dist_sq
                  farthest_point = point
+            
+            if dist_sq < min_dist_from_puck_sq:
+                min_dist_from_puck_sq = dist_sq
+                closest_point = point
+                
     except Exception as e:
          print(f"Erreur lors de l'itération sur arrow_contour: {e}")
          print(f"arrow_contour: {arrow_contour}") 
          return None, None
 
 
-    if farthest_point:
-        dist_fp = np.sqrt(max_dist_from_puck_sq)
-        min_arrow_length = 5
-        if dist_fp < min_arrow_length:
-            print(f"Point le plus éloigné trop proche: {dist_fp:.1f} pixels")
+    if farthest_point and closest_point:
+        cv2.circle(debug_frame, farthest_point, 5, (0, 255, 0), -1)
+        cv2.circle(debug_frame, closest_point, 5, (255, 0, 0), -1)
+        cv2.line(debug_frame, closest_point, farthest_point, (0, 0, 255), 1)
+        cv2.imshow("Debug Candidates", debug_frame)
+
+        dist_fp = distance_points(farthest_point, closest_point)
+        if dist_fp == 0:
+            print("Erreur: distance entre closest_point et farthest_point est nulle.")
             return None, None
 
-        dx = farthest_point[0] - puck_pos[0]
-        dy = farthest_point[1] - puck_pos[1]
+        dx = farthest_point[0] - closest_point[0]
+        dy = farthest_point[1] - closest_point[1]
 
         ux = dx / dist_fp
         uy = dy / dist_fp
 
         trajectory_length = dist_fp
-        end_x = int(puck_pos[0] + ux * trajectory_length)
-        end_y = int(puck_pos[1] + uy * trajectory_length)
+        end_x = int(closest_point[0] + ux * trajectory_length)
+        end_y = int(closest_point[1] + uy * trajectory_length)
 
-        cv2.circle(debug_frame, farthest_point, 5, (0, 255, 0), -1)
-        cv2.line(debug_frame, puck_pos, farthest_point, (0, 0, 255), 1)
-
-        cv2.imshow("Debug Candidates", debug_frame)
-
-        return puck_pos, (end_x, end_y)
+        return closest_point, (end_x, end_y)
     else:
         print("Impossible de déterminer le point le plus éloigné.")
         return None, None
