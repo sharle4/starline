@@ -3,6 +3,7 @@ import numpy as np
 import cv2
 import time
 import pygetwindow as gw
+from collections import deque
 from screeninfo import get_monitors
 from pynput.mouse import Listener, Button
 from window_finder import find_emulator_window

@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from collections import deque
 
 def distance_points(p1, p2):
     """ Calcule la distance euclidienne entre deux points (tuples). """
@@ -11,6 +12,44 @@ def distance_points(p1, p2):
         print(f"Erreur de calcul de distance avec p1={p1}, p2={p2}")
         return float('inf')
 
+
+def pca_orientation(contour):
+    """ Calcule l'orientation principale d'un contour en utilisant PCA. """
+    if contour is None or len(contour) == 0:
+        print("Erreur: Contour vide ou None.")
+        return None, None
+
+    try:
+        pts = contour.reshape(-1,2).astype(np.float32)
+        mean = np.mean(pts, axis=0)
+        cov  = np.cov(pts.T)
+        eigvals, eigvecs = np.linalg.eigh(cov)
+        principal = eigvecs[:, np.argmax(eigvals)]
+        principal /= np.linalg.norm(principal)+1e-6
+        return mean, principal
+    except Exception as e:
+        print(f"Erreur PCA: {e}")
+        return None, None
+
+
+class ArrowTracker:
+    def __init__(self, history=5):
+        self.end_hist = deque(maxlen=history)
+        self.valid    = False
+
+    def smooth(self, pt):
+        if pt is not None:
+            self.end_hist.append(pt)
+            self.valid = True
+        elif not self.end_hist:
+            self.valid = False
+        if not self.valid:
+            return None
+        xs = [p[0] for p in self.end_hist]
+        ys = [p[1] for p in self.end_hist]
+        return (int(np.mean(xs)), int(np.mean(ys)))
+
+arrow_tracker = ArrowTracker(history=5)
 
 
 def find_arrow_direction(frame, puck):
@@ -31,13 +70,14 @@ def find_arrow_direction(frame, puck):
     
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     
-    yellow_lower = np.array([19, 50, 50])
-    yellow_upper = np.array([29, 255, 255])
-    
+    yellow_lower = np.array([17, 80, 120], np.uint8)
+    yellow_upper = np.array([29, 255, 255], np.uint8)
     mask = cv2.inRange(hsv, yellow_lower, yellow_upper)
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    
+    kernel5 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    kernel11 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel11)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel5)
     
     cv2.imshow("Yellow Arrow Mask", mask)
 
@@ -46,7 +86,7 @@ def find_arrow_direction(frame, puck):
     potential_arrows = []
     min_arrow_area = 20
     max_arrow_area = 10000
-    max_distance_from_puck = 100
+    max_distance_from_puck = 200
 
     for contour in contours:
         area = cv2.contourArea(contour)
@@ -70,8 +110,7 @@ def find_arrow_direction(frame, puck):
     cv2.imshow("Debug Candidates", debug_frame)
     
     if not potential_arrows:
-        print("Aucune flèche potentielle après filtrage.")
-        return None, None
+        return puck_pos, arrow_tracker.smooth(None)
     
     best_arrow = min(potential_arrows, key=lambda a: a['dist'])
     arrow_contour = best_arrow['contour']
