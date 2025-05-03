@@ -195,7 +195,7 @@ def __init__():
         cv2.namedWindow("Debug view", cv2.WINDOW_NORMAL)
         cv2.namedWindow("Grayscale Edges", cv2.WINDOW_NORMAL)
         cv2.namedWindow("Debug Candidates", cv2.WINDOW_NORMAL)
-        position_all_windows(emulator_win)
+        position_all_windows()
                                
         return emulator_win
     else:
@@ -215,7 +215,7 @@ if __name__ == "__main__":
             
             if frame is not None:
                 if monitor_info and (monitor_info["left"] != CURRENT_WIN.left or monitor_info["top"] != CURRENT_WIN.top):
-                    position_all_windows(CURRENT_WIN)
+                    position_all_windows()
                 
                 debug_frame = frame.copy()
                 
