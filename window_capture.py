@@ -2,6 +2,8 @@ import mss
 import numpy as np
 import cv2
 import time
+import pygetwindow as gw
+from screeninfo import get_monitors
 from pynput.mouse import Listener, Button
 from window_finder import find_emulator_window
 from overlay_class import TrajectoryOverlay
@@ -15,15 +17,51 @@ LAST_CLICK_POS = None
 CURRENT_WIN = None
 
 
-def position_debug_windows(emulator_win):
-    """Position toutes les fenêtres de débogage à côté de la fenêtre de l'émulateur"""
-    emulator_right = emulator_win.left + emulator_win.width
-    
-    cv2.moveWindow("Debug view", emulator_right + 10, emulator_win.top)
-    cv2.moveWindow("Grayscale Edges", emulator_right + 10, emulator_win.top + 300)
-    cv2.moveWindow("Debug Candidates", emulator_right + 10, emulator_win.top + 600)
-    
+def get_screen_dimensions():
+    """Retourne les dimensions de l'écran principal."""
+    for m in get_monitors():
+        if m.is_primary:
+            return m.width, m.height
 
+def position_all_windows():
+    """Position des fenêtres au 4 coins de l'écran."""
+    screen_width, screen_height = get_screen_dimensions()
+    quadrant_width = screen_width // 2
+    quadrant_height = screen_height // 2
+    
+    emulator_win = find_emulator_window()
+    if emulator_win:
+        try:
+            win = gw.getWindowsWithTitle(emulator_win.title)[0]
+            win.moveTo(0, 0)
+            win.resizeTo(quadrant_width, quadrant_height)
+            
+            emulator_win.left = 0
+            emulator_win.top = 0
+            emulator_win.width = quadrant_width
+            emulator_win.height = quadrant_height
+            
+            global OVERLAY
+            if OVERLAY:
+                OVERLAY.update_position({
+                    "top": 0, "left": 0,
+                    "width": quadrant_width, "height": quadrant_height
+                })
+        except (IndexError, AttributeError) as e:
+            print(f"Impossible de repositionner l'émulateur: {e}")
+    
+    cv2.namedWindow("Debug view", cv2.WINDOW_NORMAL)
+    cv2.moveWindow("Debug view", quadrant_width, 0)
+    cv2.resizeWindow("Debug view", quadrant_width, quadrant_height)
+    
+    cv2.namedWindow("Grayscale Edges", cv2.WINDOW_NORMAL)
+    cv2.moveWindow("Grayscale Edges", 0, quadrant_height)
+    cv2.resizeWindow("Grayscale Edges", quadrant_width, quadrant_height)
+    
+    cv2.namedWindow("Debug Candidates", cv2.WINDOW_NORMAL)
+    cv2.moveWindow("Debug Candidates", quadrant_width, quadrant_height)
+    cv2.resizeWindow("Debug Candidates", quadrant_width, quadrant_height)
+    
 def load_puck():
     """Charge le template du palet."""
     global TEMPLATE_GRAY, W, H
@@ -155,8 +193,9 @@ def __init__():
         OVERLAY = TrajectoryOverlay(initial_monitor_info)
         
         cv2.namedWindow("Debug view", cv2.WINDOW_NORMAL)
-        cv2.resizeWindow("Debug view", 640, 480)
-        position_debug_windows(emulator_win)
+        cv2.namedWindow("Grayscale Edges", cv2.WINDOW_NORMAL)
+        cv2.namedWindow("Debug Candidates", cv2.WINDOW_NORMAL)
+        position_all_windows(emulator_win)
                                
         return emulator_win
     else:
@@ -176,7 +215,7 @@ if __name__ == "__main__":
             
             if frame is not None:
                 if monitor_info and (monitor_info["left"] != CURRENT_WIN.left or monitor_info["top"] != CURRENT_WIN.top):
-                    position_debug_windows(CURRENT_WIN)
+                    position_all_windows(CURRENT_WIN)
                 
                 debug_frame = frame.copy()
                 
