@@ -366,14 +366,31 @@ if __name__ == "__main__":
                     x, y, r = puck
                     cv2.circle(debug_frame, (x, y), r, (0, 255, 0), 4)
                     trajectory_start, trajectory_end = find_arrow_direction(debug_frame, puck)
-                    if trajectory_start and trajectory_end:
-                        width = monitor_info["width"]
-                        height = monitor_info["height"]
-                        points = compute_bounce_trajectory(trajectory_start, trajectory_end, width, height)
+                    width = monitor_info["width"]
+                    height = monitor_info["height"]
+                    
+                    if ball is not None:
+                        bx, by, br = ball
+                        impact_vector = (bx - x, by - y)
+                        norm = np.linalg.norm(impact_vector)
+                        if norm > 0:
+                            impact_dir = (impact_vector[0] / norm, impact_vector[1] / norm)
+                            end_x = int(bx + impact_dir[0] * 2000)
+                            end_y = int(by + impact_dir[1] * 2000)
+                            trajectory_start_ball = (bx, by)
+                            trajectory_end_ball = (end_x, end_y)
+                            points = compute_bounce_trajectory(trajectory_start_ball, trajectory_end_ball, width, height)
+                        else:
+                            points = []
+                            
                     else:
-                        points = []
+                        if trajectory_start and trajectory_end:
+                            points = compute_bounce_trajectory(trajectory_start, trajectory_end, width, height)
+                        else:
+                            points = []
                 else:
                     points = []
+
                 OVERLAY.update_trajectory(points)
                         
                 cv2.imshow("Debug view", debug_frame)
