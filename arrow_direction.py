@@ -107,7 +107,6 @@ def find_arrow_direction(frame, puck):
     cv2.imshow("Debug Candidates", debug_frame)
     
     if not potential_arrows:
-        print("Aucune flèche trouvée.")
         return closest_tracker.smooth(None), farthest_tracker.smooth(None)
 
     

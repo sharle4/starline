@@ -121,7 +121,7 @@ def on_mouse_click(x, y, button, pressed):
     """Capture les clics de souris et convertit les coordonnées globales en coordonnées relatives à la fenêtre."""
     global LAST_CLICK_POS, LAST_RCLICK_POS, CURRENT_WIN
     
-    if pressed and button == Button.left:
+    if pressed:
         if CURRENT_WIN and CURRENT_WIN.isActive:
             relative_x = x - CURRENT_WIN.left
             relative_y = y - CURRENT_WIN.top
@@ -236,8 +236,9 @@ def find_ball(frame, puck_radius, click_pos=None):
         hsv_ball = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         v = cv2.mean(hsv_ball[:,:,2], mask=mask_ball)[0]
         if v < 220:
+            dist = distance_points((x, y), click_pos)
+            print(dist)
             if click_pos is not None:
-                dist = distance_points((x, y), click_pos)
                 if dist < puck_radius:
                     candidates.append((int(x), int(y), int(radius), dist))
             else:
@@ -245,10 +246,11 @@ def find_ball(frame, puck_radius, click_pos=None):
 
     if candidates:
         x, y, r, d = max(candidates, key=lambda c: c[3])
+        #print(f"Ballon trouvé : ({x}, {y}), rayon : {r}, distance : {d}")
         return ball_tracker.smooth((x, y, r))
 
-    print("Aucun ballon trouvé.")
-    return None
+    #print("Aucun ballon trouvé.")
+    return ball_tracker.smooth(None)
 
 
 def toggle_overlay(state=[True]):
