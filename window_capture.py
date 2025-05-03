@@ -8,14 +8,16 @@ from screeninfo import get_monitors
 from pynput.mouse import Listener, Button
 from window_finder import find_emulator_window
 from overlay_class import TrajectoryOverlay
-from arrow_direction import find_arrow_direction
+from arrow_direction import find_arrow_direction, distance_points
 
 
 TEMPLATE_GRAY = None
 W, H = None, None
 OVERLAY = None
 LAST_CLICK_POS = None
+LAST_RCLICK_POS = None
 CURRENT_WIN = None
+BASE_PUCK_RADIUS = 25
 
 
 def get_screen_dimensions():
@@ -117,7 +119,7 @@ def capture_window(window):
 
 def on_mouse_click(x, y, button, pressed):
     """Capture les clics de souris et convertit les coordonnées globales en coordonnées relatives à la fenêtre."""
-    global LAST_CLICK_POS, CURRENT_WIN
+    global LAST_CLICK_POS, LAST_RCLICK_POS, CURRENT_WIN
     
     if pressed and button == Button.left:
         if CURRENT_WIN and CURRENT_WIN.isActive:
@@ -125,12 +127,16 @@ def on_mouse_click(x, y, button, pressed):
             relative_y = y - CURRENT_WIN.top
             
             if 0 <= relative_x < CURRENT_WIN.width and 0 <= relative_y < CURRENT_WIN.height:
-                LAST_CLICK_POS = (relative_x, relative_y)
-                print(f"Clic enregistré à: {LAST_CLICK_POS}")
+                if button == Button.left:
+                    LAST_CLICK_POS = (relative_x, relative_y)
+                    print(f"Clic gauche enregistré à: {LAST_CLICK_POS}")
+                elif button == Button.right:
+                    LAST_RCLICK_POS = (relative_x, relative_y)
+                    print(f"Clic droit enregistré à: {LAST_RCLICK_POS}")
     return True
 
 
-class PuckTracker:
+class CircleTracker:
     """
     Lisse (x,y,r) sur N frames.
     S'il n'y a plus de détection quelques frames, 
@@ -151,7 +157,8 @@ class PuckTracker:
                 int(np.mean(ys)),
                 int(np.mean(rs)))
 
-puck_tracker = PuckTracker(history=5)
+puck_tracker = CircleTracker(history=5)
+ball_tracker = CircleTracker(history=5)
 
 
 def find_puck(frame, click_pos=None):
@@ -190,6 +197,55 @@ def find_puck(frame, click_pos=None):
     return None
 
 
+def find_ball(frame, puck_radius, click_pos=None):
+    """Retourne (x,y,r) du ballon ou None."""
+    if frame is None:
+        return None
+    
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    lower_white = np.array([0, 0, 180])
+    upper_white = np.array([180, 50, 255])
+    mask = cv2.inRange(hsv, lower_white, upper_white)
+
+    mask = cv2.medianBlur(mask, 5)
+    mask = cv2.erode(mask, None, iterations=1)
+    mask = cv2.dilate(mask, None, iterations=1)
+
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    candidates = []
+    min_r = 8
+    max_r = int(puck_radius/2)
+    for cnt in contours:
+        area = cv2.contourArea(cnt)
+        if area < 30:
+            continue
+        (x, y), radius = cv2.minEnclosingCircle(cnt)
+        if radius < min_r or radius > max_r:
+            continue
+
+        perimeter = cv2.arcLength(cnt, True)
+        if perimeter == 0:
+            continue
+        circularity = 4 * np.pi * area / (perimeter * perimeter)
+        if circularity < 0.7:
+            continue
+
+        mask_ball = np.zeros(mask.shape, np.uint8)
+        cv2.circle(mask_ball, (int(x), int(y)), int(radius*0.8), 255, -1)
+        mean_val = cv2.mean(frame, mask=mask_ball)
+        hsv_ball = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        v = cv2.mean(hsv_ball[:,:,2], mask=mask_ball)[0]
+        if v < 220:
+            candidates.append((int(x), int(y), int(radius), distance_points((x, y), click_pos)))
+
+    if candidates:
+        x, y, r, d = max(candidates, key=lambda c: c[3])
+        return ball_tracker.smooth((x, y, r))
+
+    print("Aucun ballon trouvé.")
+    return None
+
+
 def toggle_overlay(state=[True]):
     """Active ou désactive l'overlay."""
     state[0] = not state[0]
@@ -209,8 +265,8 @@ def compute_bounce_trajectory(start, end, width, height, max_bounces=5):
     """Calcule la trajectoire avec rebonds sur les murs de la fenêtre."""
     top_wall = int(height * (217 / 720))
     bottom_wall = int(height * (653 / 720))
-    left_wall = int(width * (235 / 1280))
-    right_wall = int(width * (983 / 1280))
+    left_wall = int(width * (234 / 1280))
+    right_wall = int(width * (982 / 1280))
     
     points = [start]
     x, y = start
@@ -296,9 +352,12 @@ if __name__ == "__main__":
                 debug_frame = frame.copy()
                 
                 puck = find_puck(frame, LAST_CLICK_POS)
+                ball = find_ball(frame, BASE_PUCK_RADIUS/1280*monitor_info["width"], LAST_RCLICK_POS)
+                if ball:cv2.circle(debug_frame, (ball[0], ball[1]), ball[2], (255, 255, 255), 4)
+                
                 if puck:
                     x, y, r = puck
-                    cv2.circle(frame, (x, y), r, (0, 255, 0), 4)
+                    cv2.circle(debug_frame, (x, y), r, (0, 255, 0), 4)
                     trajectory_start, trajectory_end = find_arrow_direction(debug_frame, puck)
                     if trajectory_start and trajectory_end:
                         width = monitor_info["width"]
