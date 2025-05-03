@@ -15,6 +15,15 @@ LAST_CLICK_POS = None
 CURRENT_WIN = None
 
 
+def position_debug_windows(emulator_win):
+    """Position toutes les fenêtres de débogage à côté de la fenêtre de l'émulateur"""
+    emulator_right = emulator_win.left + emulator_win.width
+    
+    cv2.moveWindow("Debug view", emulator_right + 10, emulator_win.top)
+    cv2.moveWindow("Grayscale Edges", emulator_right + 10, emulator_win.top + 300)
+    cv2.moveWindow("Debug Candidates", emulator_right + 10, emulator_win.top + 600)
+    
+
 def load_puck():
     """Charge le template du palet."""
     global TEMPLATE_GRAY, W, H
@@ -144,6 +153,11 @@ def __init__():
             "width": emulator_win.width, "height": emulator_win.height
         }
         OVERLAY = TrajectoryOverlay(initial_monitor_info)
+        
+        cv2.namedWindow("Debug view", cv2.WINDOW_NORMAL)
+        cv2.resizeWindow("Debug view", 640, 480)
+        position_debug_windows(emulator_win)
+                               
         return emulator_win
     else:
         print("Fenêtre non trouvée, impossible de lancer l'overlay.")
@@ -161,6 +175,9 @@ if __name__ == "__main__":
             frame, monitor_info = capture_window(CURRENT_WIN)
             
             if frame is not None:
+                if monitor_info and (monitor_info["left"] != CURRENT_WIN.left or monitor_info["top"] != CURRENT_WIN.top):
+                    position_debug_windows(CURRENT_WIN)
+                
                 debug_frame = frame.copy()
                 
                 puck = find_puck(frame, LAST_CLICK_POS)
