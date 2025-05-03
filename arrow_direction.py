@@ -29,30 +29,24 @@ def find_arrow_direction(frame, puck):
     
     debug_frame = frame.copy()
     
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0) 
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     
-    canny_thresh1 = 30
-    canny_thresh2 = 100
-    edges = cv2.Canny(blurred, canny_thresh1, canny_thresh2)
+    yellow_lower = np.array([25, 100, 100])
+    yellow_upper = np.array([35, 255, 255])
     
-    kernel = np.ones((3,3), np.uint8)
-    edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)  
-    edges = cv2.dilate(edges, kernel, iterations=1)
+    mask = cv2.inRange(hsv, yellow_lower, yellow_upper)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    
+    cv2.imshow("Yellow Arrow Mask", mask)
 
-    cv2.imshow("Grayscale Edges", edges)
-    
-    contours, _ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     potential_arrows = []
-    min_arrow_area = 5
+    min_arrow_area = 20
     max_arrow_area = 10000
-    max_distance_from_puck = 100
-    min_aspect_ratio_elongation = 1 
-
-    if not contours:
-        print("Aucun contour trouvé par Canny.")
-        pass
+    max_distance_from_puck = 200
 
     for contour in contours:
         area = cv2.contourArea(contour)
@@ -67,16 +61,6 @@ def find_arrow_direction(frame, puck):
         centroid = (cx, cy)
         dist_to_puck = distance_points(centroid, puck_pos)
 
-        if dist_to_puck > max_distance_from_puck or dist_to_puck < puck_radius+4:
-            continue
-        
-        x, y, w, h = cv2.boundingRect(contour)
-        aspect_ratio = float(w) / h if h > 0 else 0
-        inv_aspect_ratio = float(h) / w if w > 0 else 0
-        
-        if max(aspect_ratio, inv_aspect_ratio) < min_aspect_ratio_elongation:
-            continue
-        
         potential_arrows.append({'contour': contour, 'centroid': centroid, 'area': area, 'dist': dist_to_puck})
         cv2.drawContours(debug_frame, [contour], -1, (255, 0, 255), 1)
     
@@ -85,7 +69,7 @@ def find_arrow_direction(frame, puck):
     if not potential_arrows:
         print("Aucune flèche potentielle après filtrage.")
         return None, None
-    print(f"Flèches potentielles trouvées: {len(potential_arrows)}")
+    
     best_arrow = min(potential_arrows, key=lambda a: a['dist'])
     arrow_contour = best_arrow['contour']
 
