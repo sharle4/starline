@@ -205,6 +205,56 @@ def toggle_overlay(state=[True]):
         win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, style)
         
 
+def compute_bounce_trajectory(start, end, width, height, max_bounces=5):
+    """Calcule la trajectoire avec rebonds sur les murs de la fenêtre."""
+    top_wall = int(height * (217 / 720))
+    bottom_wall = int(height * (653 / 720))
+    left_wall = int(width * (235 / 1280))
+    right_wall = int(width * (983 / 1280))
+    
+    points = [start]
+    x, y = start
+    dx = end[0] - start[0]
+    dy = end[1] - start[1]
+    if dx == 0 and dy == 0:
+        return points
+    vx = dx
+    vy = dy
+    
+    for _ in range(max_bounces):
+        t_candidates = []
+        if vx > 0:
+            t_right = (right_wall - x) / vx
+            t_candidates.append((t_right, 'right'))
+        elif vx < 0:
+            t_left = (left_wall - x) / vx
+            t_candidates.append((t_left, 'left'))
+            
+        if vy > 0:
+            t_bottom = (bottom_wall - y) / vy
+            t_candidates.append((t_bottom, 'bottom'))
+        elif vy < 0:
+            t_top = (top_wall - y) / vy
+            t_candidates.append((t_top, 'top'))
+            
+        t_wall, wall = min((t for t in t_candidates if t[0] > 0), default=(None, None))
+        if t_wall is None:
+            break
+        x_new = x + vx * t_wall
+        y_new = y + vy * t_wall
+        
+        x_new = min(max(x_new, left_wall), right_wall)
+        y_new = min(max(y_new, top_wall), bottom_wall)
+        points.append((int(x_new), int(y_new)))
+        x, y = x_new, y_new
+        
+        if wall == 'left' or wall == 'right':
+            vx = -vx
+        if wall == 'top' or wall == 'bottom':
+            vy = -vy
+    return points
+
+
 def __init__():
     """Initialise l'application."""
     global OVERLAY
@@ -248,11 +298,17 @@ if __name__ == "__main__":
                 puck = find_puck(frame, LAST_CLICK_POS)
                 if puck:
                     x, y, r = puck
-                    cv2.circle(frame, (x, y), r, (0, 255, 0), 2)
+                    cv2.circle(frame, (x, y), r, (0, 255, 0), 4)
                     trajectory_start, trajectory_end = find_arrow_direction(debug_frame, puck)
+                    if trajectory_start and trajectory_end:
+                        width = monitor_info["width"]
+                        height = monitor_info["height"]
+                        points = compute_bounce_trajectory(trajectory_start, trajectory_end, width, height)
+                    else:
+                        points = []
                 else:
-                    trajectory_start, trajectory_end = None, None
-                OVERLAY.update_trajectory(trajectory_start, trajectory_end)
+                    points = []
+                OVERLAY.update_trajectory(points)
                         
                 cv2.imshow("Debug view", debug_frame)
                 key = cv2.waitKey(1) & 0xFF

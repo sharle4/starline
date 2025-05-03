@@ -40,17 +40,14 @@ class TrajectoryOverlay:
             print(f"Erreur lors de la configuration click-through: {e}")
 
 
-    def update_trajectory(self, start_point, end_point):
-        """Met à jour la ligne de trajectoire sur le canvas."""
+    def update_trajectory(self, points):
+        """Met à jour la ligne de trajectoire avec rebonds sur le canvas."""
         if self.line_id:
             self.canvas.delete(self.line_id)
 
-        if start_point and end_point:
+        if points and len(points) > 1:
             self.line_id = self.canvas.create_line(
-                start_point[0], start_point[1],
-                end_point[0], end_point[1],
-                fill="white", width=2, tags="trajectory"
-            )
+                *sum(points, ()), fill='white', width=2, tags='trajectory')
         else:
              self.line_id = None 
 
