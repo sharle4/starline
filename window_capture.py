@@ -236,7 +236,12 @@ def find_ball(frame, puck_radius, click_pos=None):
         hsv_ball = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         v = cv2.mean(hsv_ball[:,:,2], mask=mask_ball)[0]
         if v < 220:
-            candidates.append((int(x), int(y), int(radius), distance_points((x, y), click_pos)))
+            if click_pos is not None:
+                dist = distance_points((x, y), click_pos)
+                if dist < puck_radius:
+                    candidates.append((int(x), int(y), int(radius), dist))
+            else:
+                candidates.append((int(x), int(y), int(radius), dist))
 
     if candidates:
         x, y, r, d = max(candidates, key=lambda c: c[3])
