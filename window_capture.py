@@ -62,7 +62,8 @@ def position_all_windows():
     cv2.namedWindow("Debug Candidates", cv2.WINDOW_NORMAL)
     cv2.moveWindow("Debug Candidates", quadrant_width, quadrant_height)
     cv2.resizeWindow("Debug Candidates", quadrant_width, quadrant_height)
-    
+
+
 def load_puck():
     """Charge le template du palet."""
     global TEMPLATE_GRAY, W, H
@@ -129,6 +130,30 @@ def on_mouse_click(x, y, button, pressed):
     return True
 
 
+class PuckTracker:
+    """
+    Lisse (x,y,r) sur N frames.
+    S'il n'y a plus de détection quelques frames, 
+    on conserve la dernière valeur lissée.
+    """
+    def __init__(self, history=5):
+        self.hist = deque(maxlen=history)
+
+    def smooth(self, puck_raw):
+        if puck_raw is not None:
+            self.hist.append(puck_raw)
+
+        if not self.hist:
+            return None
+
+        xs, ys, rs = zip(*self.hist)
+        return (int(np.mean(xs)),
+                int(np.mean(ys)),
+                int(np.mean(rs)))
+
+puck_tracker = PuckTracker(history=5)
+
+
 def find_puck(frame, click_pos=None):
     """Retourne (x,y,r) du palet ou None."""
     if frame is None:
@@ -159,7 +184,7 @@ def find_puck(frame, click_pos=None):
             hough = sorted(hough, key=lambda c: (c[0]-cx)**2 + (c[1]-cy)**2)
         x, y, r = hough[0]
         #print(f"Palet trouvé : ({x}, {y}), rayon : {r}")
-        return (x, y, r)
+        return puck_tracker.smooth((x, y, r))
 
     print("Aucun palet trouvé.")
     return None
