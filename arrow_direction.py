@@ -81,7 +81,7 @@ def find_arrow_direction(frame, puck_pos):
         print("Aucune flèche potentielle après filtrage.")
         return None, None
 
-    best_arrow = max(potential_arrows, key=lambda a: a['area'])
+    best_arrow = min(potential_arrows, key=lambda a: a['dist'])
     arrow_contour = best_arrow['contour']
 
     cv2.drawContours(debug_frame, [arrow_contour], -1, (0, 255, 255), 2)
