@@ -22,7 +22,7 @@ CURRENT_WIN = None
 BASE_PUCK_RADIUS = 25
 BALL_TRAJECTORY = True
 PUCK_TRAJECTORY = True
-SAVE_TRAJECTORY = False
+FREEZE_TRAJECTORY = False
 
 
 def get_screen_dimensions():
@@ -143,7 +143,7 @@ def on_mouse_click(x, y, button, pressed):
 
 def on_key_press(key):
     """Gère les pressions de touches."""
-    global BALL_TRAJECTORY, PUCK_TRAJECTORY, SAVE_TRAJECTORY, running
+    global BALL_TRAJECTORY, PUCK_TRAJECTORY, FREEZE_TRAJECTORY, running
     try:
         if key.char == 'q':
             print("Arrêt demandé.")
@@ -164,9 +164,9 @@ def on_key_press(key):
             print("Basculer l'affiche de la trajectoire du palet.")
             PUCK_TRAJECTORY = not PUCK_TRAJECTORY
         
-        elif key.char == 's' or key.char == 'S':
-            print("Basculer mode affichage.")
-            SAVE_TRAJECTORY = not SAVE_TRAJECTORY
+        elif key.char == 'f' or key.char == 'F':
+            print("Basculer le mode de gel de trajectoires.")
+            FREEZE_TRAJECTORY = not FREEZE_TRAJECTORY
             
             
             
@@ -462,7 +462,7 @@ if __name__ == "__main__":
                             if PUCK_TRAJECTORY:
                                 trajectories.append((puck_points, 'red'))
                 
-                if not SAVE_TRAJECTORY:
+                if not FREEZE_TRAJECTORY:
                     OVERLAY.update_trajectory(trajectories)
                         
                 cv2.imshow("Debug view", debug_frame)
