@@ -22,6 +22,7 @@ CURRENT_WIN = None
 BASE_PUCK_RADIUS = 25
 BALL_TRAJECTORY = True
 PUCK_TRAJECTORY = True
+SAVE_TRAJECTORY = False
 
 
 def get_screen_dimensions():
@@ -142,15 +143,14 @@ def on_mouse_click(x, y, button, pressed):
 
 def on_key_press(key):
     """Gère les pressions de touches."""
+    global BALL_TRAJECTORY, PUCK_TRAJECTORY, SAVE_TRAJECTORY, running
     try:
         if key.char == 'q':
             print("Arrêt demandé.")
-            global running
             running = False
             
         elif key.char == 'o' or key.char == 't' or key.char == 'O' or key.char == 'T':
             print("Basculer l'affichage des trajectoires.")
-            global BALL_TRAJECTORY, PUCK_TRAJECTORY
             if BALL_TRAJECTORY or PUCK_TRAJECTORY:
                 BALL_TRAJECTORY, PUCK_TRAJECTORY = False, False
             else:
@@ -158,13 +158,17 @@ def on_key_press(key):
                 
         elif key.char == 'b' or key.char == 'B':
             print("Basculer l'affiche de la trajectoire de la balle.")
-            global BALL_TRAJECTORY
             BALL_TRAJECTORY = not BALL_TRAJECTORY
             
         elif key.char == 'p' or key.char == 'P':
             print("Basculer l'affiche de la trajectoire du palet.")
-            global PUCK_TRAJECTORY
             PUCK_TRAJECTORY = not PUCK_TRAJECTORY
+        
+        elif key.char == 's' or key.char == 'S':
+            print("Basculer mode affichage.")
+            SAVE_TRAJECTORY = not SAVE_TRAJECTORY
+            
+            
             
     except AttributeError:
         pass
@@ -269,8 +273,8 @@ def find_ball(frame, puck_radius, click_pos=None):
         minDist=20,
         param1=150,
         param2=5,
-        minRadius=5,
-        maxRadius=20
+        minRadius=9,
+        maxRadius=11
     )
     
     best_ball = None
@@ -437,8 +441,8 @@ if __name__ == "__main__":
                             norm = np.linalg.norm(impact_dir)
                             if norm > 0:
                                 impact_dir = (impact_dir[0] / norm, impact_dir[1] / norm)
-                                end_x = int(bx + impact_dir[0] * 1000)
-                                end_y = int(by + impact_dir[1] * 1000)
+                                end_x = int(bx + impact_dir[0] * 500)
+                                end_y = int(by + impact_dir[1] * 500)
                                 trajectory_start_ball = (bx, by)
                                 trajectory_end_ball = (end_x, end_y)
                                 ball_points = compute_bounce_trajectory(trajectory_start_ball, trajectory_end_ball, width, height)
@@ -457,8 +461,9 @@ if __name__ == "__main__":
                             puck_points = compute_bounce_trajectory(trajectory_start, trajectory_end, width, height)
                             if PUCK_TRAJECTORY:
                                 trajectories.append((puck_points, 'red'))
-
-                OVERLAY.update_trajectory(trajectories)
+                
+                if not SAVE_TRAJECTORY:
+                    OVERLAY.update_trajectory(trajectories)
                         
                 cv2.imshow("Debug view", debug_frame)
                 key = cv2.waitKey(1) & 0xFF

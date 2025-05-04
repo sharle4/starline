@@ -160,7 +160,7 @@ def find_arrow_direction(frame, puck):
         ux = dx / dist_fp
         uy = dy / dist_fp
 
-        trajectory_length = 1000
+        trajectory_length = 200
         end_x = int(closest_point[0] + ux * trajectory_length)
         end_y = int(closest_point[1] + uy * trajectory_length)
 
