@@ -408,7 +408,7 @@ if __name__ == "__main__":
                         bx, by, br = ball
                         impact_point = line_circle_intersection(trajectory_start, trajectory_end, (bx, by), br+r)
                         if impact_point:
-                            impact_dir = (impact_point[0] - bx, impact_point[1] - by)
+                            impact_dir = (bx - impact_point[0], by - impact_point[1])
                             norm = np.linalg.norm(impact_dir)
                             if norm > 0:
                                 impact_dir = (impact_dir[0] / norm, impact_dir[1] / norm)
