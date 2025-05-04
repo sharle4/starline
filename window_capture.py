@@ -397,6 +397,8 @@ if __name__ == "__main__":
                 ball = find_ball(frame, BASE_PUCK_RADIUS/1280*monitor_info["width"], LAST_RCLICK_POS)
                 if ball:cv2.circle(debug_frame, (ball[0], ball[1]), ball[2], (255, 255, 255), 4)
                 
+                trajectories = []
+                
                 if puck:
                     x, y, r = puck
                     cv2.circle(debug_frame, (x, y), r, (0, 255, 0), 4)
@@ -416,21 +418,21 @@ if __name__ == "__main__":
                                 end_y = int(by + impact_dir[1] * 2000)
                                 trajectory_start_ball = (bx, by)
                                 trajectory_end_ball = (end_x, end_y)
-                                points = compute_bounce_trajectory(trajectory_start_ball, trajectory_end_ball, width, height)
+                                ball_points = compute_bounce_trajectory(trajectory_start_ball, trajectory_end_ball, width, height)
+                                trajectories.append((ball_points, 'white'))
                             else:
-                                points = []
+                                ball_points = []
                         else:
-                            points = compute_bounce_trajectory(trajectory_start, trajectory_end, width, height)
+                            ball_points = []
+                        puck_points = compute_bounce_trajectory(trajectory_start, trajectory_end, width, height)
+                        trajectories.append((puck_points, 'red'))
                             
                     else:
                         if trajectory_start and trajectory_end:
-                            points = compute_bounce_trajectory(trajectory_start, trajectory_end, width, height)
-                        else:
-                            points = []
-                else:
-                    points = []
+                            puck_points = compute_bounce_trajectory(trajectory_start, trajectory_end, width, height)
+                            trajectories.append((puck_points, 'red'))
 
-                OVERLAY.update_trajectory(points)
+                OVERLAY.update_trajectory(trajectories)
                         
                 cv2.imshow("Debug view", debug_frame)
                 key = cv2.waitKey(1) & 0xFF

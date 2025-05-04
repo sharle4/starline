@@ -20,7 +20,7 @@ class TrajectoryOverlay:
         self.canvas = tk.Canvas(self.root, bg='black', highlightthickness=0)
         self.canvas.pack(fill=tk.BOTH, expand=True)
 
-        self.line_id = None
+        self.line_ids = []
         self._make_click_through()
 
     def _make_click_through(self):
@@ -40,16 +40,18 @@ class TrajectoryOverlay:
             print(f"Erreur lors de la configuration click-through: {e}")
 
 
-    def update_trajectory(self, points):
+    def update_trajectory(self, trajectories):
         """Met à jour la ligne de trajectoire avec rebonds sur le canvas."""
-        if self.line_id:
-            self.canvas.delete(self.line_id)
+        for line_id in self.line_ids:
+            self.canvas.delete(line_id)
 
-        if points and len(points) > 1:
-            self.line_id = self.canvas.create_line(
-                *sum(points, ()), fill='white', width=2, tags='trajectory')
-        else:
-             self.line_id = None 
+        self.line_ids = []
+
+        for points, color in trajectories:
+            if points and len(points) > 1:
+                line_id = self.canvas.create_line(
+                    *sum(points, ()), fill=color, width=2)
+                self.line_ids.append(line_id)
 
         self.root.update()
 
