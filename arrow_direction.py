@@ -76,7 +76,7 @@ def find_arrow_direction(frame, puck):
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel11)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel5)
     
-    cv2.imshow("Yellow Arrow Mask", mask)
+    #cv2.imshow("Yellow Arrow Mask", mask)
 
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 

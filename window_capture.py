@@ -201,20 +201,32 @@ def find_ball(frame, puck_radius, click_pos=None):
     """Retourne (x,y,r) du ballon ou None."""
     if frame is None:
         return None
+    if click_pos is None:
+        click_pos = (frame.shape[0]//2, frame.shape[1]//2)
+        
+    search_radius = int(puck_radius)
+    x0, y0 = click_pos
+    x_min, x_max = max(0, x0 - search_radius), min(frame.shape[1], x0 + search_radius)
+    y_min, y_max = max(0, y0 - search_radius), min(frame.shape[0], y0 + search_radius)
+    roi = frame[y_min:y_max, x_min:x_max]
     
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    lower_white = np.array([0, 0, 180])
-    upper_white = np.array([180, 50, 255])
-    mask = cv2.inRange(hsv, lower_white, upper_white)
+    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+    lower_white = np.array([0, 0, 150])
+    upper_white = np.array([180, 80, 255])
+    mask_white = cv2.inRange(hsv, lower_white, upper_white)
+    
+    lower_black = np.array([0, 0, 0])
+    upper_black = np.array([180, 255, 60])
+    mask_black = cv2.inRange(hsv, lower_black, upper_black)
 
-    mask = cv2.medianBlur(mask, 5)
-    mask = cv2.erode(mask, None, iterations=1)
-    mask = cv2.dilate(mask, None, iterations=1)
-
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    mask_white = cv2.medianBlur(mask_white, 5)
+    mask_white = cv2.erode(mask_white, None, iterations=1)
+    mask_white = cv2.dilate(mask_white, None, iterations=1)
+    cv2.imshow("Yellow Arrow Mask", mask_white)
+    contours, _ = cv2.findContours(mask_white, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     candidates = []
-    min_r = 8
-    max_r = int(puck_radius/2)
+    min_r = 2
+    max_r = int(puck_radius)
     for cnt in contours:
         area = cv2.contourArea(cnt)
         if area < 30:
@@ -227,22 +239,26 @@ def find_ball(frame, puck_radius, click_pos=None):
         if perimeter == 0:
             continue
         circularity = 4 * np.pi * area / (perimeter * perimeter)
-        if circularity < 0.7:
+        if circularity < 0.8:
             continue
 
-        mask_ball = np.zeros(mask.shape, np.uint8)
-        cv2.circle(mask_ball, (int(x), int(y)), int(radius*0.8), 255, -1)
-        mean_val = cv2.mean(frame, mask=mask_ball)
-        hsv_ball = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        v = cv2.mean(hsv_ball[:,:,2], mask=mask_ball)[0]
-        if v < 220:
-            dist = distance_points((x, y), click_pos)
-            print(dist)
-            if click_pos is not None:
-                if dist < puck_radius:
-                    candidates.append((int(x), int(y), int(radius), dist))
-            else:
-                candidates.append((int(x), int(y), int(radius), dist))
+        theta = np.linspace(0, 2*np.pi, 16)
+        border_points = np.array([
+            [int(x + (radius+2)*np.cos(t)), int(y + (radius+2)*np.sin(t))]
+            for t in theta
+        ])
+        border_points = border_points[
+            (border_points[:,0] >= 0) & (border_points[:,0] < mask_black.shape[1]) &
+            (border_points[:,1] >= 0) & (border_points[:,1] < mask_black.shape[0])
+        ]
+        if len(border_points) == 0:
+            continue
+        black_vals = [mask_black[pt[1], pt[0]] for pt in border_points]
+        if np.mean(black_vals) < 128:
+            abs_x = int(x) + x_min
+            abs_y = int(y) + y_min
+            dist = distance_points((abs_x, abs_y), click_pos)
+            candidates.append((abs_x, abs_y, int(radius), dist))
 
     if candidates:
         x, y, r, d = max(candidates, key=lambda c: c[3])
