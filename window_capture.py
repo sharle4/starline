@@ -2,6 +2,7 @@ import mss
 import numpy as np
 import cv2
 import time
+import math
 import pygetwindow as gw
 from collections import deque
 from screeninfo import get_monitors
@@ -249,7 +250,6 @@ def find_ball(frame, puck_radius, click_pos=None):
     return ball_tracker.smooth(None)
 
 
-
 def toggle_overlay(state=[True]):
     """Active ou désactive l'overlay."""
     state[0] = not state[0]
@@ -315,6 +315,44 @@ def compute_bounce_trajectory(start, end, width, height, max_bounces=5):
     return points
 
 
+def line_circle_intersection(p1, p2, center, radius):
+    """Retourne le point d'intersection entre une ligne et un cercle."""
+    if p1 == p2:
+        return None
+    
+    (x1, y1), (x2, y2) = p1, p2
+    (cx, cy) = center
+
+    dx = x2 - x1
+    dy = y2 - y1
+
+    fx = x1 - cx
+    fy = y1 - cy
+
+    a = dx*dx + dy*dy
+    b = 2 * (fx*dx + fy*dy)
+    c = (fx*fx + fy*fy) - radius*radius
+
+    delta = b*b - 4*a*c
+    if delta < 0:
+        return None
+
+    sqrt_delta = math.sqrt(delta)
+    t1 = (-b - sqrt_delta) / (2*a)
+    t2 = (-b + sqrt_delta) / (2*a)
+
+    points = []
+    for t in [t1, t2]:
+        if 0 <= t <= 1:
+            ix = x1 + t*dx
+            iy = y1 + t*dy
+            points.append((ix, iy))
+    if points:
+        points.sort(key=lambda pt: (pt[0]-x1)**2 + (pt[1]-y1)**2)
+        return points[0]
+    return None
+
+
 def __init__():
     """Initialise l'application."""
     global OVERLAY
@@ -366,19 +404,23 @@ if __name__ == "__main__":
                     width = monitor_info["width"]
                     height = monitor_info["height"]
                     
-                    if ball is not None:
+                    if ball is not None and trajectory_start and trajectory_end:
                         bx, by, br = ball
-                        impact_vector = (bx - x, by - y)
-                        norm = np.linalg.norm(impact_vector)
-                        if norm > 0:
-                            impact_dir = (impact_vector[0] / norm, impact_vector[1] / norm)
-                            end_x = int(bx + impact_dir[0] * 2000)
-                            end_y = int(by + impact_dir[1] * 2000)
-                            trajectory_start_ball = (bx, by)
-                            trajectory_end_ball = (end_x, end_y)
-                            points = compute_bounce_trajectory(trajectory_start_ball, trajectory_end_ball, width, height)
+                        impact_point = line_circle_intersection(trajectory_start, trajectory_end, (bx, by), br+r)
+                        if impact_point:
+                            impact_dir = (impact_point[0] - bx, impact_point[1] - by)
+                            norm = np.linalg.norm(impact_dir)
+                            if norm > 0:
+                                impact_dir = (impact_dir[0] / norm, impact_dir[1] / norm)
+                                end_x = int(bx + impact_dir[0] * 2000)
+                                end_y = int(by + impact_dir[1] * 2000)
+                                trajectory_start_ball = (bx, by)
+                                trajectory_end_ball = (end_x, end_y)
+                                points = compute_bounce_trajectory(trajectory_start_ball, trajectory_end_ball, width, height)
+                            else:
+                                points = []
                         else:
-                            points = []
+                            points = compute_bounce_trajectory(trajectory_start, trajectory_end, width, height)
                             
                     else:
                         if trajectory_start and trajectory_end:
