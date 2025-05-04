@@ -198,75 +198,56 @@ def find_puck(frame, click_pos=None):
 
 
 def find_ball(frame, puck_radius, click_pos=None):
-    """Retourne (x,y,r) du ballon ou None."""
     if frame is None:
-        return None
+        return ball_tracker.smooth(None)
+    
     if click_pos is None:
-        click_pos = (frame.shape[0]//2, frame.shape[1]//2)
-        
-    search_radius = int(puck_radius)
+        click_pos = (frame.shape[1] // 2, frame.shape[0] // 2)
+    
     x0, y0 = click_pos
+    search_radius = int(puck_radius)
     x_min, x_max = max(0, x0 - search_radius), min(frame.shape[1], x0 + search_radius)
     y_min, y_max = max(0, y0 - search_radius), min(frame.shape[0], y0 + search_radius)
-    roi = frame[y_min:y_max, x_min:x_max]
-    
-    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-    lower_white = np.array([0, 0, 150])
-    upper_white = np.array([180, 80, 255])
-    mask_white = cv2.inRange(hsv, lower_white, upper_white)
-    
-    lower_black = np.array([0, 0, 0])
-    upper_black = np.array([180, 255, 60])
-    mask_black = cv2.inRange(hsv, lower_black, upper_black)
 
-    mask_white = cv2.medianBlur(mask_white, 5)
-    mask_white = cv2.erode(mask_white, None, iterations=1)
-    mask_white = cv2.dilate(mask_white, None, iterations=1)
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    hsv = cv2.medianBlur(hsv, 5)
+    roi = hsv[y_min:y_max, x_min:x_max]
+    
+    lower_white = np.array([0, 0, 190])
+    upper_white = np.array([179, 70, 255])
+    mask_white = cv2.inRange(roi, lower_white, upper_white)
+    
+    
+    mask_white = cv2.medianBlur(mask_white, 3)
+    kernel5 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    kernel11 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11))
+    mask_white = cv2.morphologyEx(mask_white, cv2.MORPH_CLOSE, kernel11, iterations=3)
+    mask_white = cv2.morphologyEx(mask_white, cv2.MORPH_OPEN, kernel5, iterations=3)
+    
     cv2.imshow("Yellow Arrow Mask", mask_white)
-    contours, _ = cv2.findContours(mask_white, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    candidates = []
-    min_r = 2
-    max_r = int(puck_radius)
-    for cnt in contours:
-        area = cv2.contourArea(cnt)
-        if area < 30:
-            continue
-        (x, y), radius = cv2.minEnclosingCircle(cnt)
-        if radius < min_r or radius > max_r:
-            continue
-
-        perimeter = cv2.arcLength(cnt, True)
-        if perimeter == 0:
-            continue
-        circularity = 4 * np.pi * area / (perimeter * perimeter)
-        if circularity < 0.8:
-            continue
-
-        theta = np.linspace(0, 2*np.pi, 16)
-        border_points = np.array([
-            [int(x + (radius+2)*np.cos(t)), int(y + (radius+2)*np.sin(t))]
-            for t in theta
-        ])
-        border_points = border_points[
-            (border_points[:,0] >= 0) & (border_points[:,0] < mask_black.shape[1]) &
-            (border_points[:,1] >= 0) & (border_points[:,1] < mask_black.shape[0])
-        ]
-        if len(border_points) == 0:
-            continue
-        black_vals = [mask_black[pt[1], pt[0]] for pt in border_points]
-        if np.mean(black_vals) < 128:
-            abs_x = int(x) + x_min
-            abs_y = int(y) + y_min
-            dist = distance_points((abs_x, abs_y), click_pos)
-            candidates.append((abs_x, abs_y, int(radius), dist))
-
-    if candidates:
-        x, y, r, d = max(candidates, key=lambda c: c[3])
-        #print(f"Ballon trouvé : ({x}, {y}), rayon : {r}, distance : {d}")
-        return ball_tracker.smooth((x, y, r))
-
-    #print("Aucun ballon trouvé.")
+    
+    circles = cv2.HoughCircles(
+        mask_white,
+        cv2.HOUGH_GRADIENT,
+        dp=1,
+        minDist=20,
+        param1=150,
+        param2=5,
+        minRadius=5,
+        maxRadius=20
+    )
+    
+    best_ball = None
+    if circles is not None:
+        circles = np.uint16(np.around(circles[0, :]))
+        circles = sorted(circles, key=lambda c: distance_points((c[0], c[1]), (x0, y0)))
+        best_ball = circles[0]
+        bx, by, br = best_ball[0] + x_min, best_ball[1] + y_min, best_ball[2]
+        print(f"Ballon trouvé : ({bx}, {by}), R={br}, distance={distance_points((bx, by), (x0, y0))}")
+        return ball_tracker.smooth((bx, by, br))
+         
     return ball_tracker.smooth(None)
+
 
 
 def toggle_overlay(state=[True]):
