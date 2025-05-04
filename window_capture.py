@@ -7,6 +7,7 @@ import pygetwindow as gw
 from collections import deque
 from screeninfo import get_monitors
 from pynput.mouse import Listener, Button
+from pynput.keyboard import Listener as KeyboardListener
 from window_finder import find_emulator_window
 from overlay_class import TrajectoryOverlay
 from arrow_direction import find_arrow_direction, distance_points
@@ -19,6 +20,8 @@ LAST_CLICK_POS = None
 LAST_RCLICK_POS = None
 CURRENT_WIN = None
 BASE_PUCK_RADIUS = 25
+BALL_TRAJECTORY = True
+PUCK_TRAJECTORY = True
 
 
 def get_screen_dimensions():
@@ -137,6 +140,38 @@ def on_mouse_click(x, y, button, pressed):
     return True
 
 
+def on_key_press(key):
+    """Gère les pressions de touches."""
+    try:
+        if key.char == 'q':
+            print("Arrêt demandé.")
+            global running
+            running = False
+            
+        elif key.char == 'o' or key.char == 't' or key.char == 'O' or key.char == 'T':
+            print("Basculer l'affichage des trajectoires.")
+            global BALL_TRAJECTORY, PUCK_TRAJECTORY
+            if BALL_TRAJECTORY or PUCK_TRAJECTORY:
+                BALL_TRAJECTORY, PUCK_TRAJECTORY = False, False
+            else:
+                BALL_TRAJECTORY, PUCK_TRAJECTORY = True, True
+                
+        elif key.char == 'b' or key.char == 'B':
+            print("Basculer l'affiche de la trajectoire de la balle.")
+            global BALL_TRAJECTORY
+            BALL_TRAJECTORY = not BALL_TRAJECTORY
+            
+        elif key.char == 'p' or key.char == 'P':
+            print("Basculer l'affiche de la trajectoire du palet.")
+            global PUCK_TRAJECTORY
+            PUCK_TRAJECTORY = not PUCK_TRAJECTORY
+            
+    except AttributeError:
+        pass
+    except Exception as e:
+        print(f"Erreur lors de la pression de touche: {e}")
+
+
 class CircleTracker:
     """
     Lisse (x,y,r) sur N frames.
@@ -249,22 +284,7 @@ def find_ball(frame, puck_radius, click_pos=None):
          
     return ball_tracker.smooth(None)
 
-
-def toggle_overlay(state=[True]):
-    """Active ou désactive l'overlay."""
-    state[0] = not state[0]
-    OVERLAY.root.attributes("-topmost", state[0])
-    if state[0]:
-        OVERLAY._make_click_through()   # re-active click-through
-    else:
-        # enlève le style transparent pour pouvoir interagir
-        import win32gui, win32con
-        hwnd = OVERLAY.root.winfo_id()
-        style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
-        style &= ~win32con.WS_EX_TRANSPARENT
-        win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, style)
         
-
 def compute_bounce_trajectory(start, end, width, height, max_bounces=5):
     """Calcule la trajectoire avec rebonds sur les murs de la fenêtre."""
     top_wall = int(height * (217 / 720))
@@ -381,9 +401,12 @@ if __name__ == "__main__":
     CURRENT_WIN = __init__()
     mouse_listener = Listener(on_click=on_mouse_click)
     mouse_listener.start()
-
+    keyboard_listener = KeyboardListener(on_press=on_key_press)
+    keyboard_listener.start()
+    running = True
+    print("Lancement de l'application...")
     try:
-        while True:
+        while running:
 
             frame, monitor_info = capture_window(CURRENT_WIN)
             
@@ -414,33 +437,31 @@ if __name__ == "__main__":
                             norm = np.linalg.norm(impact_dir)
                             if norm > 0:
                                 impact_dir = (impact_dir[0] / norm, impact_dir[1] / norm)
-                                end_x = int(bx + impact_dir[0] * 2000)
-                                end_y = int(by + impact_dir[1] * 2000)
+                                end_x = int(bx + impact_dir[0] * 1000)
+                                end_y = int(by + impact_dir[1] * 1000)
                                 trajectory_start_ball = (bx, by)
                                 trajectory_end_ball = (end_x, end_y)
                                 ball_points = compute_bounce_trajectory(trajectory_start_ball, trajectory_end_ball, width, height)
-                                trajectories.append((ball_points, 'white'))
+                                if BALL_TRAJECTORY:
+                                    trajectories.append((ball_points, 'white'))
                             else:
                                 ball_points = []
                         else:
                             ball_points = []
                         puck_points = compute_bounce_trajectory(trajectory_start, trajectory_end, width, height)
-                        trajectories.append((puck_points, 'red'))
+                        if PUCK_TRAJECTORY:
+                            trajectories.append((puck_points, 'red'))
                             
                     else:
                         if trajectory_start and trajectory_end:
                             puck_points = compute_bounce_trajectory(trajectory_start, trajectory_end, width, height)
-                            trajectories.append((puck_points, 'red'))
+                            if PUCK_TRAJECTORY:
+                                trajectories.append((puck_points, 'red'))
 
                 OVERLAY.update_trajectory(trajectories)
                         
                 cv2.imshow("Debug view", debug_frame)
                 key = cv2.waitKey(1) & 0xFF
-                if key == ord('q'):
-                    break
-                elif key == ord('o'):
-                    toggle_overlay()
-
         
             else:
                 print("Erreur de capture, pause.")
@@ -453,6 +474,8 @@ if __name__ == "__main__":
     finally:
         if mouse_listener.is_alive():
             mouse_listener.stop()
+        if keyboard_listener.is_alive():
+            keyboard_listener.stop()
         if 'overlay' in locals() and OVERLAY:
             OVERLAY.close()
         cv2.destroyAllWindows()
