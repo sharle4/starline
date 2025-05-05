@@ -230,7 +230,7 @@ def find_puck(frame, click_pos=None):
             cx, cy = click_pos
             hough = sorted(hough, key=lambda c: (c[0]-cx)**2 + (c[1]-cy)**2)
         x, y, r = hough[0]
-        print(f"Palet trouvé : ({x}, {y}), rayon : {r}")
+        #print(f"Palet trouvé : ({x}, {y}), rayon : {r}")
         return puck_tracker.smooth((x, y, r))
 
     print("Aucun palet trouvé.")
@@ -306,9 +306,9 @@ def find_aimcircle(frame, puck, arrow_start, arrow_end):
     dir_x = -dx / norm
     dir_y = -dy / norm
     
-    offset = int(r * 1.2)
+    offset = int(r * 3)
     roi_center = (int(x + dir_x * offset), int(y + dir_y * offset))
-    roi_size = int(r * 3)
+    roi_size = int(r * 4)
     x_min, x_max = max(0, roi_center[0] - roi_size), min(frame.shape[1], roi_center[0] + roi_size)
     y_min, y_max = max(0, roi_center[1] - roi_size), min(frame.shape[0], roi_center[1] + roi_size)
     roi = frame[y_min:y_max, x_min:x_max]
@@ -317,7 +317,7 @@ def find_aimcircle(frame, puck, arrow_start, arrow_end):
     _, mask = cv2.threshold(gray, 60, 255, cv2.THRESH_BINARY_INV)
     mask = cv2.medianBlur(mask, 5)
     
-    cv2.imshow("Yellow Arrow Mask", mask)
+    cv2.imshow("Yellow Arrow Mask", roi)
     
     circles = cv2.HoughCircles(
         mask,
@@ -336,12 +336,13 @@ def find_aimcircle(frame, puck, arrow_start, arrow_end):
         circles = np.uint16(np.around(circles[0]))
         for cx, cy, cr in circles:
             results.append((cx + x_min, cy + y_min, cr))
-            cv2.circle(frame, (cx + x_min, cy + y_min), cr, (0, 0, 255), 2)
     
         best_circle = sorted(results, key=lambda c: distance_points((c[0], c[1]), (x, y)))[-1]
     
     if best_circle:
+        print(f"Cercle de visée trouvé : ({best_circle[0]}, {best_circle[1]}), R={best_circle[2]}")
         return aimcircle_tracker.smooth(best_circle)
+    print("Aucun cercle de visée trouvé.")
     return aimcircle_tracker.smooth(None)
 
 
@@ -486,6 +487,8 @@ if __name__ == "__main__":
                     x, y, r = puck
                     cv2.circle(debug_frame, (x, y), r, (0, 255, 0), 4)
                     trajectory_start, trajectory_end = find_arrow_direction(debug_frame, puck)
+                    aim_circle = find_aimcircle(debug_frame, puck, trajectory_start, trajectory_end)
+                    if aim_circle: cv2.circle(debug_frame, (aim_circle[0], aim_circle[1]), aim_circle[2], (255, 0, 0), 4)
                     width = monitor_info["width"]
                     height = monitor_info["height"]
                     
