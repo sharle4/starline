@@ -49,7 +49,7 @@ closest_tracker = PointTracker(history=5)
 farthest_tracker = PointTracker(history=5)
 
 
-def find_arrow_direction(frame, puck):
+def find_arrow_direction(frame, puck, debug_frame):
     """
     Détecte la flèche de visée près du palet et retourne son point de départ (puck_pos)
     et un point final virtuel définissant la direction.
@@ -62,8 +62,6 @@ def find_arrow_direction(frame, puck):
     
     puck_pos = puck[:2]
     puck_radius = puck[2]
-    
-    debug_frame = frame.copy()
     
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     
@@ -147,7 +145,6 @@ def find_arrow_direction(frame, puck):
         cv2.circle(debug_frame, farthest_point, 5, (0, 255, 0), -1)
         cv2.circle(debug_frame, closest_point, 5, (255, 0, 0), -1)
         cv2.line(debug_frame, closest_point, farthest_point, (0, 0, 255), 1)
-        cv2.imshow("Debug Candidates", debug_frame)
 
         dist_fp = distance_points(farthest_point, closest_point)
         if dist_fp == 0:

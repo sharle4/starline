@@ -59,16 +59,12 @@ def position_all_windows():
             print(f"Impossible de repositionner l'émulateur: {e}")
     
     cv2.namedWindow("Debug view", cv2.WINDOW_NORMAL)
-    cv2.moveWindow("Debug view", quadrant_width, 0)
+    cv2.moveWindow("Debug view", quadrant_width, quadrant_height)
     cv2.resizeWindow("Debug view", quadrant_width, quadrant_height)
     
     cv2.namedWindow("Yellow Arrow Mask", cv2.WINDOW_NORMAL)
     cv2.moveWindow("Yellow Arrow Mask", 0, quadrant_height)
     cv2.resizeWindow("Yellow Arrow Mask", quadrant_width, quadrant_height)
-    
-    cv2.namedWindow("Debug Candidates", cv2.WINDOW_NORMAL)
-    cv2.moveWindow("Debug Candidates", quadrant_width, quadrant_height)
-    cv2.resizeWindow("Debug Candidates", quadrant_width, quadrant_height)
 
 
 def load_puck():
@@ -308,7 +304,7 @@ def find_aimcircle(frame, puck, arrow_start, arrow_end):
     
     offset = int(r * 3)
     roi_center = (int(x + dir_x * offset), int(y + dir_y * offset))
-    roi_size = int(r * 4)
+    roi_size = int(r + norm/2)
     x_min, x_max = max(0, roi_center[0] - roi_size), min(frame.shape[1], roi_center[0] + roi_size)
     y_min, y_max = max(0, roi_center[1] - roi_size), min(frame.shape[0], roi_center[1] + roi_size)
     roi = frame[y_min:y_max, x_min:x_max]
@@ -450,7 +446,6 @@ def __init__():
         
         cv2.namedWindow("Debug view", cv2.WINDOW_NORMAL)
         cv2.namedWindow("Yellow Arrow Mask", cv2.WINDOW_NORMAL)
-        cv2.namedWindow("Debug Candidates", cv2.WINDOW_NORMAL)
         position_all_windows()
                                
         return emulator_win
@@ -487,11 +482,10 @@ if __name__ == "__main__":
                 if puck:
                     x, y, r = puck
                     cv2.circle(debug_frame, (x, y), r, (0, 255, 0), 4)
-                    trajectory_start, trajectory_end = find_arrow_direction(frame, puck)
+                    trajectory_start, trajectory_end = find_arrow_direction(frame, puck, debug_frame)
                     aim_circle = find_aimcircle(frame, puck, trajectory_start, trajectory_end)
                     if aim_circle:
-                        print(f"Cercle de visée trouvé V222222222: ({aim_circle[0]}, {aim_circle[1]}), R={aim_circle[2]}")
-                        cv2.circle(debug_frame, (aim_circle[0], aim_circle[1]), 10, (255, 0, 255), 4)
+                        cv2.circle(debug_frame, (aim_circle[0], aim_circle[1]), aim_circle[2], (255, 0, 255), 2)
                     width = monitor_info["width"]
                     height = monitor_info["height"]
                     
