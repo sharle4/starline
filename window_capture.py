@@ -281,7 +281,7 @@ def find_ball(frame, puck_radius, click_pos=None):
     best_ball = None
     if circles is not None:
         circles = np.uint16(np.around(circles[0, :]))
-        circles = sorted(circles, key=lambda c: distance_points((c[0], c[1]), (x0, y0)))
+        circles = sorted(circles, key=lambda c: distance_points((c[0]+x_min, c[1]+y_min), (x0, y0)))
         best_ball = circles[0]
         bx, by, br = best_ball[0] + x_min, best_ball[1] + y_min, best_ball[2]
         print(f"Ballon trouvé : ({bx}, {by}), R={br}, distance={distance_points((bx, by), (x0, y0))}")
@@ -314,7 +314,7 @@ def find_aimcircle(frame, puck, arrow_start, arrow_end):
     roi = frame[y_min:y_max, x_min:x_max]
     
     gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-    _, mask = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY_INV)
+    _, mask = cv2.threshold(gray, 90, 255, cv2.THRESH_BINARY_INV)
     mask = cv2.medianBlur(mask, 5)
     
     cv2.imshow("Yellow Arrow Mask", mask)
@@ -338,6 +338,7 @@ def find_aimcircle(frame, puck, arrow_start, arrow_end):
             results.append((cx + x_min, cy + y_min, cr))
     
         best_circle = sorted(results, key=lambda c: distance_points((c[0], c[1]), (x, y)))[-1]
+        print(f"distance au palet: {distance_points((best_circle[0], best_circle[1]), (x, y))}")
         best_circle = (best_circle[0]+x_min, best_circle[1]+y_min, best_circle[2])
         
     if best_circle:
@@ -489,7 +490,9 @@ if __name__ == "__main__":
                     cv2.circle(debug_frame, (x, y), r, (0, 255, 0), 4)
                     trajectory_start, trajectory_end = find_arrow_direction(debug_frame, puck)
                     aim_circle = find_aimcircle(debug_frame, puck, trajectory_start, trajectory_end)
-                    if aim_circle: cv2.circle(debug_frame, (aim_circle[0], aim_circle[1]), aim_circle[2], (255, 0, 255), 4)
+                    if aim_circle:
+                        print("CERCLEEEEEEEEEEEE")
+                        cv2.circle(debug_frame, (aim_circle[0], aim_circle[1]), aim_circle[2]+5, (255, 0, 255), 4)
                     width = monitor_info["width"]
                     height = monitor_info["height"]
                     
