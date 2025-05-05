@@ -319,7 +319,7 @@ def find_aimcircle(frame, puck, arrow_start, arrow_end):
         mask,
         cv2.HOUGH_GRADIENT,
         dp=1.2,
-        minDist=int(r*0.8),
+        minDist=6,
         param1=50,
         param2=10,
         minRadius=2,
@@ -328,15 +328,24 @@ def find_aimcircle(frame, puck, arrow_start, arrow_end):
     
     results = []
     best_circle = None
+    
     if circles is not None:
         circles = np.uint16(np.around(circles[0]))
         for cx, cy, cr in circles:
-            results.append((cx + x_min, cy + y_min, cr))
+            x0, y0 = arrow_start
+            x1, y1 = arrow_end
+            px, py = cx + x_min, cy + y_min
+            num = abs((y1 - y0)*px - (x1 - x0)*py + x1*y0 - y1*x0)
+            den = np.hypot(y1 - y0, x1 - x0)
+            distance = num / den if den != 0 else float('inf')
+            if distance < 4:
+                results.append((cx + x_min, cy + y_min, cr))
     
         best_circle = sorted(results, key=lambda c: distance_points((c[0], c[1]), (x, y)))[-1]
         print(f"distance au palet: {distance_points((best_circle[0], best_circle[1]), (x, y))}")
         
-    if best_circle:
+    if results:
+        return results
         #print(f"Cercle de visée trouvé : ({best_circle[0]}, {best_circle[1]}), R={best_circle[2]}")
         return aimcircle_tracker.smooth(best_circle)
     print("Aucun cercle de visée trouvé.")
@@ -483,9 +492,10 @@ if __name__ == "__main__":
                     x, y, r = puck
                     cv2.circle(debug_frame, (x, y), r, (0, 255, 0), 4)
                     trajectory_start, trajectory_end = find_arrow_direction(frame, puck, debug_frame)
-                    aim_circle = find_aimcircle(frame, puck, trajectory_start, trajectory_end)
-                    if aim_circle:
-                        cv2.circle(debug_frame, (aim_circle[0], aim_circle[1]), aim_circle[2], (255, 0, 255), 2)
+                    aim_circles = find_aimcircle(frame, puck, trajectory_start, trajectory_end)
+                    if aim_circles:
+                        for aim_circle in aim_circles:
+                            cv2.circle(debug_frame, (aim_circle[0], aim_circle[1]), aim_circle[2], (255, 0, 255), 2)
                     width = monitor_info["width"]
                     height = monitor_info["height"]
                     
