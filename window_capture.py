@@ -314,10 +314,10 @@ def find_aimcircle(frame, puck, arrow_start, arrow_end):
     roi = frame[y_min:y_max, x_min:x_max]
     
     gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-    _, mask = cv2.threshold(gray, 60, 255, cv2.THRESH_BINARY_INV)
+    _, mask = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY_INV)
     mask = cv2.medianBlur(mask, 5)
     
-    cv2.imshow("Yellow Arrow Mask", roi)
+    cv2.imshow("Yellow Arrow Mask", mask)
     
     circles = cv2.HoughCircles(
         mask,
@@ -326,8 +326,8 @@ def find_aimcircle(frame, puck, arrow_start, arrow_end):
         minDist=int(r*0.8),
         param1=50,
         param2=10,
-        minRadius=int(r*0.4),
-        maxRadius=int(r*0.7)
+        minRadius=2,
+        maxRadius=4
     )
     
     results = []
@@ -338,7 +338,8 @@ def find_aimcircle(frame, puck, arrow_start, arrow_end):
             results.append((cx + x_min, cy + y_min, cr))
     
         best_circle = sorted(results, key=lambda c: distance_points((c[0], c[1]), (x, y)))[-1]
-    
+        best_circle = (best_circle[0]+x_min, best_circle[1]+y_min, best_circle[2])
+        
     if best_circle:
         print(f"Cercle de visée trouvé : ({best_circle[0]}, {best_circle[1]}), R={best_circle[2]}")
         return aimcircle_tracker.smooth(best_circle)
@@ -488,7 +489,7 @@ if __name__ == "__main__":
                     cv2.circle(debug_frame, (x, y), r, (0, 255, 0), 4)
                     trajectory_start, trajectory_end = find_arrow_direction(debug_frame, puck)
                     aim_circle = find_aimcircle(debug_frame, puck, trajectory_start, trajectory_end)
-                    if aim_circle: cv2.circle(debug_frame, (aim_circle[0], aim_circle[1]), aim_circle[2], (255, 0, 0), 4)
+                    if aim_circle: cv2.circle(debug_frame, (aim_circle[0], aim_circle[1]), aim_circle[2], (255, 0, 255), 4)
                     width = monitor_info["width"]
                     height = monitor_info["height"]
                     
