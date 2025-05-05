@@ -199,7 +199,7 @@ class CircleTracker:
 
 puck_tracker = CircleTracker(history=5)
 ball_tracker = CircleTracker(history=5)
-
+aimcircle_tracker = CircleTracker(history=5)
 
 def find_puck(frame, click_pos=None):
     """Retourne (x,y,r) du palet ou None."""
@@ -238,6 +238,7 @@ def find_puck(frame, click_pos=None):
 
 
 def find_ball(frame, puck_radius, click_pos=None):
+    """Retourne (x,y,r) de la balle ou None."""
     if frame is None:
         return ball_tracker.smooth(None)
     
@@ -264,7 +265,7 @@ def find_ball(frame, puck_radius, click_pos=None):
     mask_white = cv2.morphologyEx(mask_white, cv2.MORPH_CLOSE, kernel11, iterations=3)
     mask_white = cv2.morphologyEx(mask_white, cv2.MORPH_OPEN, kernel5, iterations=3)
     
-    cv2.imshow("Yellow Arrow Mask", mask_white)
+    #cv2.imshow("Yellow Arrow Mask", mask_white)
     
     circles = cv2.HoughCircles(
         mask_white,
@@ -288,7 +289,62 @@ def find_ball(frame, puck_radius, click_pos=None):
          
     return ball_tracker.smooth(None)
 
-        
+
+def find_aimcircle(frame, puck, arrow_start, arrow_end):
+    """Retourne (x,y,r) du cercle de visée le plus loin du palet ou None."""
+    if frame is None or puck is None or arrow_start is None or arrow_end is None:
+        return aimcircle_tracker.smooth(None)
+    
+    x, y, r = puck
+    
+    dx = arrow_end[0] - arrow_start[0]
+    dy = arrow_end[1] - arrow_start[1]
+    norm = np.hypot(dx, dy)
+    if norm == 0:
+        return aimcircle_tracker.smooth(None)
+    
+    dir_x = -dx / norm
+    dir_y = -dy / norm
+    
+    offset = int(r * 1.2)
+    roi_center = (int(x + dir_x * offset), int(y + dir_y * offset))
+    roi_size = int(r * 3)
+    x_min, x_max = max(0, roi_center[0] - roi_size), min(frame.shape[1], roi_center[0] + roi_size)
+    y_min, y_max = max(0, roi_center[1] - roi_size), min(frame.shape[0], roi_center[1] + roi_size)
+    roi = frame[y_min:y_max, x_min:x_max]
+    
+    gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+    _, mask = cv2.threshold(gray, 60, 255, cv2.THRESH_BINARY_INV)
+    mask = cv2.medianBlur(mask, 5)
+    
+    cv2.imshow("Yellow Arrow Mask", mask)
+    
+    circles = cv2.HoughCircles(
+        mask,
+        cv2.HOUGH_GRADIENT,
+        dp=1.2,
+        minDist=int(r*0.8),
+        param1=50,
+        param2=10,
+        minRadius=int(r*0.4),
+        maxRadius=int(r*0.7)
+    )
+    
+    results = []
+    best_circle = None
+    if circles is not None:
+        circles = np.uint16(np.around(circles[0]))
+        for cx, cy, cr in circles:
+            results.append((cx + x_min, cy + y_min, cr))
+            cv2.circle(frame, (cx + x_min, cy + y_min), cr, (0, 0, 255), 2)
+    
+        best_circle = sorted(results, key=lambda c: distance_points((c[0], c[1]), (x, y)))[-1]
+    
+    if best_circle:
+        return aimcircle_tracker.smooth(best_circle)
+    return aimcircle_tracker.smooth(None)
+
+
 def compute_bounce_trajectory(start, end, width, height, max_bounces=5):
     """Calcule la trajectoire avec rebonds sur les murs de la fenêtre."""
     top_wall = int(height * (217 / 720))
