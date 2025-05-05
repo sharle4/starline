@@ -332,8 +332,9 @@ def find_aimcircle(frame, puck, arrow_start, arrow_end):
     if circles is not None:
         circles = np.uint16(np.around(circles[0]))
         for cx, cy, cr in circles:
-            x0, y0 = arrow_start
-            x1, y1 = arrow_end
+            cx, cy, cr = int(cx), int(cy), int(cr)
+            x0, y0 = map(int, arrow_start)
+            x1, y1 = map(int, arrow_end)
             px, py = cx + x_min, cy + y_min
             num = abs((y1 - y0)*px - (x1 - x0)*py + x1*y0 - y1*x0)
             den = np.hypot(y1 - y0, x1 - x0)
@@ -341,8 +342,8 @@ def find_aimcircle(frame, puck, arrow_start, arrow_end):
             if distance < 4:
                 results.append((cx + x_min, cy + y_min, cr))
     
-        best_circle = sorted(results, key=lambda c: distance_points((c[0], c[1]), (x, y)))[-1]
-        print(f"distance au palet: {distance_points((best_circle[0], best_circle[1]), (x, y))}")
+        #best_circle = sorted(results, key=lambda c: distance_points((c[0], c[1]), (x, y)))[-1]
+        #print(f"distance au palet: {distance_points((best_circle[0], best_circle[1]), (x, y))}")
         
     if results:
         return results
@@ -492,10 +493,17 @@ if __name__ == "__main__":
                     x, y, r = puck
                     cv2.circle(debug_frame, (x, y), r, (0, 255, 0), 4)
                     trajectory_start, trajectory_end = find_arrow_direction(frame, puck, debug_frame)
+                    trajectory_start_points = [trajectory_start]
                     aim_circles = find_aimcircle(frame, puck, trajectory_start, trajectory_end)
                     if aim_circles:
                         for aim_circle in aim_circles:
                             cv2.circle(debug_frame, (aim_circle[0], aim_circle[1]), aim_circle[2], (255, 0, 255), 2)
+                            trajectory_start_points.append((aim_circle[0], aim_circle[1]))
+                    
+                    mean_x = int(np.mean([p[0] for p in trajectory_start_points]))
+                    mean_y = int(np.mean([p[1] for p in trajectory_start_points]))
+                    refined_trajectory_start = (mean_x, mean_y)
+                        
                     width = monitor_info["width"]
                     height = monitor_info["height"]
                     
@@ -518,13 +526,13 @@ if __name__ == "__main__":
                                 ball_points = []
                         else:
                             ball_points = []
-                        puck_points = compute_bounce_trajectory(trajectory_start, trajectory_end, width, height)
+                        puck_points = compute_bounce_trajectory(refined_trajectory_start, trajectory_end, width, height)
                         if PUCK_TRAJECTORY:
                             trajectories.append((puck_points, 'red'))
                             
                     else:
                         if trajectory_start and trajectory_end:
-                            puck_points = compute_bounce_trajectory(trajectory_start, trajectory_end, width, height)
+                            puck_points = compute_bounce_trajectory(refined_trajectory_start, trajectory_end, width, height)
                             if PUCK_TRAJECTORY:
                                 trajectories.append((puck_points, 'red'))
                 
