@@ -62,9 +62,9 @@ def position_all_windows():
     cv2.moveWindow("Debug view", quadrant_width, quadrant_height)
     cv2.resizeWindow("Debug view", quadrant_width, quadrant_height)
     
-    cv2.namedWindow("Yellow Arrow Mask", cv2.WINDOW_NORMAL)
-    cv2.moveWindow("Yellow Arrow Mask", 0, quadrant_height)
-    cv2.resizeWindow("Yellow Arrow Mask", quadrant_width, quadrant_height)
+    cv2.namedWindow("Mask", cv2.WINDOW_NORMAL)
+    cv2.moveWindow("Mask", 0, quadrant_height)
+    cv2.resizeWindow("Mask", quadrant_width, quadrant_height)
 
 
 def load_puck():
@@ -261,7 +261,7 @@ def find_ball(frame, puck_radius, click_pos=None):
     mask_white = cv2.morphologyEx(mask_white, cv2.MORPH_CLOSE, kernel11, iterations=3)
     mask_white = cv2.morphologyEx(mask_white, cv2.MORPH_OPEN, kernel5, iterations=3)
     
-    #cv2.imshow("Yellow Arrow Mask", mask_white)
+    #cv2.imshow("Mask", mask_white)
     
     circles = cv2.HoughCircles(
         mask_white,
@@ -313,7 +313,7 @@ def find_aimcircle(frame, puck, arrow_start, arrow_end):
     _, mask = cv2.threshold(gray, 90, 255, cv2.THRESH_BINARY_INV)
     mask = cv2.medianBlur(mask, 5)
     
-    cv2.imshow("Yellow Arrow Mask", mask)
+    cv2.imshow("Mask", mask)
     
     circles = cv2.HoughCircles(
         mask,
@@ -445,7 +445,7 @@ def __init__():
         OVERLAY = TrajectoryOverlay(initial_monitor_info)
         
         cv2.namedWindow("Debug view", cv2.WINDOW_NORMAL)
-        cv2.namedWindow("Yellow Arrow Mask", cv2.WINDOW_NORMAL)
+        cv2.namedWindow("Mask", cv2.WINDOW_NORMAL)
         position_all_windows()
                                
         return emulator_win
